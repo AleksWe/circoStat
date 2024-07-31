@@ -23,4 +23,17 @@ $(document).ready(function() {
             $('#radioContainer').append(group);
         }
     });
+    // Before submitting the form, capture the selected radio button values
+    $('#chartForm').submit(function(event) {
+        // Remove any previous hidden inputs
+        $('.hidden-input').remove();
+
+        // Collect all selected radio button values
+        $('input[type=radio]:checked').each(function() {
+            let inputName = $(this).attr('name');
+            let inputValue = $(this).val();
+            // Append hidden input fields to the form
+            $('#chartForm').append(`<input type="hidden" name="${inputName}" value="${inputValue}" class="hidden-input">`);
+        });
+    });
 });

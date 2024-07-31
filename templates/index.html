@@ -19,13 +19,14 @@
         <input type="number" id="numRadioGroups" min="0" max="8" />
         <button id="generate">Generate</button>
     </div>
+    <form id="chartForm" method="post" action="/upload" enctype="multipart/form-data">
     <div id="radioContainer"></div>
     <!-- type="text/javascript" src="/js/chart_details.js"></script> -->
     <script></script>
 <!-- <p>Change the background color of a button with the background-color property:</p> -->
-<p>-----</p>
-<p>Choose your .fasta file(s):</p>
-<form method="post" action='/upload' enctype='multipart/form-data'>
+    <p>-----</p>
+    <b>Submit all necessary files:</b><br/>
+<!-- <form method="post" action='/upload' enctype='multipart/form-data'> -->
     <input name='files' type='file' multiple>
     <input type='submit'>
 </form>

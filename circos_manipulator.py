@@ -34,19 +34,6 @@ def meta_data(META_DATA):
 #         return new_config
 
 
-#def modification_starter(config):
-#    logging.info("   INFO: starting modifications \n")
-#    while True:
-#        try:
-#            plot_info = int(input("How many plots do you need: "))
-#            # modification = int(input("Insert number: position (1), color (2): "))
-#            break
-#        except ValueError as e:
-#            logging.error(f"   INFO: {e} - Not a valid value. Enter a number.")
-#    #new_config = total_modifier(modification, circos_conf)
-#    config_writer(new_config)
-
-
 def plot_finder(circos_conf):
     new_string = circos_conf[circos_conf.find('<plot>'):circos_conf.find('<plot>')].strip()
     return new_string
@@ -57,7 +44,7 @@ def plot_generator(config):
         new_circos_conf = ''
         kariotype = config.get('MetaData', 'karyotype')
         try:
-            plot_info = int(config.get('GeneralPlotData', 'number_of_plots'))  # for GUI it shouldn't be possible not to write a number
+            plot_info = int(config.get('OverallPlotInfo', 'number_of_plots'))  # for GUI it shouldn't be possible not to write a number
         except ValueError as e:                                                # f.ex it could be checked out on frontend side
             logging.error(f"   INFO: {e} - Not a valid value. Enter a number.")
             sys.exit(0)
@@ -67,9 +54,9 @@ def plot_generator(config):
         plotter_one = p.Plotter(file=config.get('MetaData', 'gene_name'))
         new_circos_conf += plotter_one.name_plotter()
         for i in range(plot_info):
-            file = config.get('DetailPlotInfo', 'file')
-            r1 = config.get('DetailPlotInfo', 'r1')
-            r0 = config.get('DetailPlotInfo', 'r0')
+            file = config.get('OverallPlotInfo', 'file')
+            r1 = config.get('OverallPlotInfo', 'r1')
+            r0 = config.get('OverallPlotInfo', 'r0')
             plotter = p.Plotter(file, r0, r1)
             new_plot = plotter.line_plotting()
             new_circos_conf += new_plot
