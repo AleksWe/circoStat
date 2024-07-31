@@ -10,7 +10,7 @@ RUN apt-get update && \
 FROM rocker/r-base:latest
 
 # Copy folder files to current directory
-COPY /CIRCOS_v2 .
+COPY . .
 
 # Install mamba solver for python venv
 RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-24.3.0-0-Linux-x86_64.sh"

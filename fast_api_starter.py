@@ -1,4 +1,5 @@
 import configparser
+import os
 from pathlib import Path
 
 import uvicorn
@@ -22,6 +23,9 @@ app.mount(
 
 
 def config_creator(config):
+    if os.path.exists(meta_data):
+        with open(meta_data, 'w') as file:
+            pass
     configParser = configparser.RawConfigParser()
     configParser.read(config)
     return configParser
@@ -39,11 +43,14 @@ async def upload(request: Request,
     form_data = await request.form()
 
     # Extract the chart selections dynamically
-    chart_data = {}
+    chart_type = {}
+    chart_count = 0
     for key, value in form_data.items():
-        if key.startswith('chart'):
-            chart_data[key] = value
-    print(chart_data)
+        if key.startswith('chart') and not value.isdigit():
+            chart_type[key] = value
+        if key == 'chartCount':
+            chart_count = value
+    print(chart_type)
 
     # For now, we will just print the option and the file name
     print(f"Uploaded Files: {[file.filename for file in files]}")
@@ -59,19 +66,38 @@ async def upload(request: Request,
 
     config = config_creator(meta_data)
 
-    if not config.has_section('FastaFiles'):
-        config.add_section('FastaFiles')
+    if not config.has_section('MetaData'):
+        config.add_section('MetaData')
+    if not config.has_section('OverallPlotInfo'):
+        config.add_section('OverallPlotInfo')
 
-    i = 1
+    fasta_iter = 1
     for file in files:
-        config.set('FastaFiles', f'fasta{i}', file.filename)
-        i += 1
+        if file.filename.endswith('fasta'):
+            config.set('MetaData', f'fasta{fasta_iter}', file.filename)
+            fasta_iter += 1
+        elif file.filename.find('karyotype') >= 0:  # for improvement
+            config.set('MetaData', 'karyotype', file.filename)
+        elif file.filename.find('gene_name') >= 0:  # for improvement
+            config.set('MetaData', 'gene_name', file.filename)
+
+    config.set('OverallPlotInfo', 'number_of_plots', chart_count)
+
+    file_iter = 1
+    for file in files:
+        for value in chart_type.values():
+            if file.filename.find('snp') >= 0:
+                config.set('OverallPlotInfo', f'file{file_iter}', file.filename)
+                config.set('OverallPlotInfo', f'plot_type{file_iter}', value)
+                config.set('OverallPlotInfo', f'r0{file_iter}', '0.895r')
+                config.set('OverallPlotInfo', f'r1{file_iter}', '0.995r')
+                file_iter += 1
 
     # Overwriting metadata.ini file:
     config_writer(meta_data, config)
 
     subprocess.run('./circos_project.sh', shell=True)
-    return {"message": f"Successfuly uploaded. Circos generator proceeding..."}
+    return {"message": f"Successfuly uploaded... Circos generator task completed."}
 
 
 # Access the form at 'http://0.0.0.0:8000/' from your browser
@@ -81,5 +107,5 @@ def get_form(request: Request):
 
 
 # Only for testing purposes
-if __name__ == '__main__':
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+#if __name__ == '__main__':
+#    uvicorn.run(app, host='127.0.0.1', port=8000)

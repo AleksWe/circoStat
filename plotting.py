@@ -49,6 +49,29 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
+    def scatter_plotting(self):
+        result = f"""
+            <plot>
+            type	= scatter
+            #max_gap = 1u
+            file    = {self.file}
+            min     = 0
+            max     = 430
+            r0      = {self.r0}
+            r1      = {self.r1}
+            
+            
+            glyph            = circle
+            glyph_size       = 20
+            color            = vvdred
+            stroke_color     = dred
+            stroke_thickness = 1
+            
+            </plot>
+        """
+        result = result.replace(' ', '')
+        return result
+
     def line_plotting(self):
         result = f"""
             <plot>
@@ -61,16 +84,16 @@ class Plotter:
             r0      = {self.r0}
             r1      = {self.r1}
             thickness = 3
-            
+
             <axes>
             <axis>
             spacing   = 0.05r
             color     = lgrey
             thickness = 1
-            
+
             </axis>
             </axes>
-            
+
             </plot>
         """
         result = result.replace(' ', '')

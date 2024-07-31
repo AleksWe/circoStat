@@ -53,12 +53,17 @@ def plot_generator(config):
         new_circos_conf += p.Plotter.plot_starter()
         plotter_one = p.Plotter(file=config.get('MetaData', 'gene_name'))
         new_circos_conf += plotter_one.name_plotter()
-        for i in range(plot_info):
-            file = config.get('OverallPlotInfo', 'file')
-            r1 = config.get('OverallPlotInfo', 'r1')
-            r0 = config.get('OverallPlotInfo', 'r0')
+        for i in range(1, plot_info+1):
+            file = config.get('OverallPlotInfo', f'file{i}')
+            r1 = config.get('OverallPlotInfo', f'r1{i}')
+            r0 = config.get('OverallPlotInfo', f'r0{i}')
             plotter = p.Plotter(file, r0, r1)
-            new_plot = plotter.line_plotting()
+            if config.get('OverallPlotInfo', f'plot_type{i}') == 'line':
+                new_plot = plotter.line_plotting()
+            if config.get('OverallPlotInfo', f'plot_type{i}') == 'scatter':
+                new_plot = plotter.scatter_plotting()
+            # if config.get('OverallPlotInfo', f'plot_type{i}') == 'bar':
+            #     new_plot = plotter.bar_plotting()
             new_circos_conf += new_plot
         new_circos_conf += p.Plotter.plot_ender()
         new_circos_conf += p.Plotter.image_adder()
@@ -104,7 +109,7 @@ def main():
     config = meta_data(META_DATA)
 
     # Generating .txt files from .R script for config.ini
-    files = [config.get('RScripts', 'fasta_1'), config.get('RScripts', 'fasta_2')]
+    #files = [config.get('MetaData', 'fasta1'), config.get('MetaData', 'fasta2')]
 
     # Write a newly generated circos.conf to file
     config_writer(plot_generator(config), PATH)

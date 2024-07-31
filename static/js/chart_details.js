@@ -6,6 +6,9 @@ $(document).ready(function() {
         // Clear previous content
         $('#radioContainer').empty();
 
+        // Update the hidden input field with the number of charts
+        $('#chartCount').val(num);
+
         // Define the options
         const options = ["scatter", "bar", "line"];
 
