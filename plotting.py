@@ -49,15 +49,15 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
-    def scatter_plotting(self):
+    def scatter_plotting(self,r0,r1):
         result = f"""
             <plot>
             type	= scatter
             file    = {self.file}
             min     = 0
             max     = 430
-            r0      = {self.r0}
-            r1      = {self.r1}
+            r0      = {r0}
+            r1      = {r1}
             
             
             glyph            = circle
@@ -80,7 +80,7 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
-    def line_plotting(self):
+    def line_plotting(self, r0, r1):
         result = f"""
             <plot>
             type	= line
@@ -88,8 +88,8 @@ class Plotter:
             color   = vvdred
             min     = 0
             max     = 430
-            r0      = {self.r0}
-            r1      = {self.r1}
+            r0      = {r0}
+            r1      = {r1}
             thickness = 3
 
             <axes>
@@ -106,7 +106,7 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
-    def bar_plotting(self):
+    def bar_plotting(self, r0, r1):
         result = f"""
             <plot>
             type	= histogram
@@ -114,8 +114,8 @@ class Plotter:
             color   = vvdred
             min  = 0
             max  = 7.5
-            r0      = {self.r0}
-            r1      = {self.r1}
+            r0      = {r0}
+            r1      = {r1}
             thickness = 3
 
             <axes>

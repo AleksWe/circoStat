@@ -5,7 +5,6 @@ import plotting as p
 import configparser
 import os
 
-
 # Selecting info about file names in config.ini
 META_DATA = "metadata.ini"
 # Path
@@ -43,17 +42,43 @@ def plot_generator(config):
         new_circos_conf += p.Plotter.karyotype_adder(karyotype)
         new_circos_conf += p.Plotter.ideogram_adder()
         new_circos_conf += p.Plotter.plot_starter()
-        if 'gene_name' in config:
+        starting_point = 0.895
+        r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+        # For much needed improvement!!! ε=ε=ε=┏(゜ロ゜;)┛
+        if config.has_option('MetaData', 'gene_name'):
             plotter_one = p.Plotter(file=config.get('MetaData', 'gene_name'))
             new_circos_conf += plotter_one.name_plotter()
-        if 'file_ind' in config:
-            plotter = p.Plotter(file=config.get('MetaData', 'file_ind'))
-            new_circos_conf += plotter.line_plotting()
-            new_circos_conf += plotter.scatter_plotting()
-            new_circos_conf += plotter.bar_plotting()
-        if 'file_p_div' in config:
-            plotter = p.Plotter(file=config.get('MetaData', 'file_p_div'))
-            new_circos_conf += plotter.line_plotting()
+        if config.has_option('OverallPlotInfo', 'file_snp'):
+            plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_snp'))
+            new_circos_conf += plotter.line_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+            new_circos_conf += plotter.scatter_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+        if config.has_option('OverallPlotInfo', 'file_snp_perc'):
+            plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_snp_perc'))
+            new_circos_conf += plotter.bar_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+        if config.has_option('OverallPlotInfo', 'file_ind'):
+            plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_ind'))
+            new_circos_conf += plotter.line_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+            new_circos_conf += plotter.scatter_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+        if config.has_option('OverallPlotInfo', 'file_ind_perc'):
+            plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_ind_perc'))
+            new_circos_conf += plotter.bar_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
+        if config.has_option('OverallPlotInfo', 'file_p_div'):
+            plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_p_div'))
+            new_circos_conf += plotter.line_plotting(r0=r0, r1=r1)
+            starting_point -= 0.100
+            r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
         new_circos_conf += p.Plotter.plot_ender()
         new_circos_conf += p.Plotter.image_adder()
         return new_circos_conf
