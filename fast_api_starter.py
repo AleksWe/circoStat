@@ -78,11 +78,15 @@ async def upload(options: List[str] = Form(...),
                     config.set('OverallPlotInfo', f'file_snp_perc', file.filename)
                 elif file.filename.endswith('snp.txt'):
                     config.set('OverallPlotInfo', f'file_snp', file.filename)
+                elif file.filename.endswith('mt.txt'):
+                    config.set('OverallPlotInfo', f'file_snp_mt', file.filename)
             elif file.filename.find('ind') >= 0 and option == 'IND':
                 if file.filename.endswith('perc.txt'):
                     config.set('OverallPlotInfo', f'file_ind_perc', file.filename)
                 elif file.filename.endswith('ind.txt'):
                     config.set('OverallPlotInfo', f'file_ind', file.filename)
+                elif file.filename.endswith('mt.txt'):
+                    config.set('OverallPlotInfo', f'file_ind_mt', file.filename)
             elif file.filename.find('popGenome') >= 0 and option == 'P_DIV':
                 config.set('OverallPlotInfo', f'file_p_div', file.filename)
 
@@ -100,5 +104,5 @@ def get_form(request: Request):
 
 
 # Only for testing purposes
-#if __name__ == '__main__':
-#    uvicorn.run(app, host='127.0.0.1', port=8000)
+if __name__ == '__main__':
+    uvicorn.run(app, host='127.0.0.1', port=8000)

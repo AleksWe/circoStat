@@ -49,21 +49,21 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
-    def scatter_plotting(self,r0,r1):
+    def scatter_plotting(self, r0, r1, min_val, max_val, color):
         result = f"""
             <plot>
             type	= scatter
             file    = {self.file}
-            min     = 0
-            max     = 430
+            min     = {min_val}
+            max     = {max_val}
             r0      = {r0}
             r1      = {r1}
             
             
             glyph            = circle
             glyph_size       = 20
-            color            = vvdred
-            stroke_color     = dred
+            color            = vvd{color}
+            stroke_color     = d{color}
             stroke_thickness = 1
             
             <axes>
@@ -80,14 +80,14 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
-    def line_plotting(self, r0, r1):
+    def line_plotting(self, r0, r1, min_val, max_val, color):
         result = f"""
             <plot>
             type	= line
             file    = {self.file}
-            color   = vvdred
-            min     = 0
-            max     = 430
+            color   = vvd{color}
+            min     = {min_val}
+            max     = {max_val}
             r0      = {r0}
             r1      = {r1}
             thickness = 3
@@ -106,18 +106,20 @@ class Plotter:
         result = result.replace(' ', '')
         return result
 
-    def bar_plotting(self, r0, r1):
+    def bar_plotting(self, r0, r1, min_val, max_val, color):
         result = f"""
             <plot>
             type	= histogram
             file    = {self.file}
-            color   = vvdred
-            min  = 0
-            max  = 7.5
+            color   = vd{color}
+            min  = {min_val}
+            max  = {max_val}
             r0      = {r0}
             r1      = {r1}
             thickness = 3
-
+            extend_bin  = no
+            fill_color  = vvd{color}
+            
             <axes>
             <axis>
             spacing   = 0.05r

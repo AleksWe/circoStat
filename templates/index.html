@@ -19,21 +19,21 @@
     <form action="http://localhost:8000/upload" method="post" enctype="multipart/form-data" id="form2">
         <div class="w-25 col-md-4">
             <div class="card inset">
-                <label>
+                <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="SNP" id="SNP" onchange="toggleSendButton()">
-                    <label class="fs-5 form-check-label" for="SNP">
+                    <label class="ml-1 fs-5 form-check-label" for="SNP">
                     SNP
-                </label><br>
-                <label>
+                </label></div><br>
+                <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="IND" id="IND" onchange="toggleSendButton()">
-                    <label class="fs-5 form-check-label" for="IND">
+                    <label class="ml-1 fs-5 form-check-label" for="IND">
                     IND
-                </label><br>
-                <label>
+                </label></div><br>
+                <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="P_DIV" id="P_DIV" disabled>
-                    <label class="fs-5 form-check-label" for="P_DIV">
+                    <label class="ml-1 fs-5 form-check-label" for="P_DIV">
                     P_DIV
-                </label>
+                </label></div>
             </div>
         </div>
         <script type="text/javascript" src="/static/js/chart_details.js"></script><br>
