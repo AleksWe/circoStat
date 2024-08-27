@@ -69,43 +69,6 @@ def plot_generator(config):
             file_name = config.get('MetaData', 'gene_name')
             plotter_one = p.Plotter(file=file_name)
             new_circos_conf += plotter_one.name_plotter()
-        #if config.has_option('OverallPlotInfo', 'file_snp'):
-        #    file_name = config.get('OverallPlotInfo', 'file_snp')
-        #    min_value, max_value = all_min_max_returner(file_name)
-        #    plotter = p.Plotter(file=file_name)
-        #    new_circos_conf += plotter.line_plotting(r0=r0, r1=r1, min_val=min_value, max_val=max_value, color='vvdred')
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        #if config.has_option('OverallPlotInfo', 'file_snp_mt'):
-        #    file_name = config.get('OverallPlotInfo', 'file_snp_mt')
-        #    min_value, max_value = all_min_max_returner(file_name)
-        #    plotter = p.Plotter(file=file_name)
-        #    new_circos_conf += plotter.scatter_plotting(r0=r0, r1=r1, min_val=min_value, max_val=max_value, color='vvdred')
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        #if config.has_option('OverallPlotInfo', 'file_snp_perc'):
-        #    plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_snp_perc'))
-        #    new_circos_conf += plotter.bar_plotting(r0=r0, r1=r1)
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        #if config.has_option('OverallPlotInfo', 'file_ind'):
-        #    plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_ind'))
-        #    new_circos_conf += plotter.line_plotting(r0=r0, r1=r1)
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        #    new_circos_conf += plotter.scatter_plotting(r0=r0, r1=r1)
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        #if config.has_option('OverallPlotInfo', 'file_ind_perc'):
-        #    plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_ind_perc'))
-        #    new_circos_conf += plotter.bar_plotting(r0=r0, r1=r1)
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        #if config.has_option('OverallPlotInfo', 'file_p_div'):
-        #    plotter = p.Plotter(file=config.get('OverallPlotInfo', 'file_p_div'))
-        #    new_circos_conf += plotter.line_plotting(r0=r0, r1=r1)
-        #    starting_point -= 0.100
-        #    r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
         if config.has_option('OverallPlotInfo', 'file_snp'):
             new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config,'OverallPlotInfo','file_snp',new_circos_conf,r0,r1,'red',starting_point, type='line')
         if config.has_option('OverallPlotInfo', 'file_snp_mt'):
