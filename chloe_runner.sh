@@ -7,6 +7,6 @@ cd chloe
 julia --project=. chloe.jl annotate --gff *.fasta
 
 # Copy generated file to main directory, remove lingering fasta files:
-cp *.gff3 ../
+cp *.gff3 *.fasta *.fa ../
 rm *.fasta *.fa
 cd ..
