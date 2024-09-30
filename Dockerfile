@@ -1,15 +1,6 @@
 #### R
 # Base R image
-FROM rocker/r-base:latest
-
-# Install R packages
-RUN install2.r --error \
-    spider \
-    ape
-
-# Clean up package lists to reduce image size
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# FROM rocker/r-base:latest
 
 #### Ubuntu with Julia
 # Use the official Ubuntu image
@@ -22,8 +13,32 @@ WORKDIR /usr/src/app
 
 # Install necessary packages (git, python, curl, wget)
 RUN apt-get update && \
-    apt-get install --assume-yes git && \
-    apt-get install -y python3 python3-pip wget curl
+    apt-get install --assume-yes git python3 python3-pip wget curl build-essential \
+    libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev \
+    libblas-dev liblapack-dev gfortran libpcre2-dev liblzma-dev libbz2-dev
+
+
+### Installing R and R packages
+ARG R_VERSION=4.3.1
+ENV PATH /opt/R/${R_VERSION}/bin:$PATH
+
+# Install R
+RUN wget -q https://cdn.rstudio.com/r/ubuntu-2204/R-${R_VERSION}-ubuntu-2204.tar.gz -O /tmp/R-${R_VERSION}.tar.gz && \
+    mkdir -p /opt/R && \
+    tar zx -C /opt/R -f /tmp/R-${R_VERSION}.tar.gz && \
+    rm /tmp/R-${R_VERSION}.tar.gz
+
+# Install littler (provides install2.r command)
+RUN /opt/R/${R_VERSION}/bin/R -e "install.packages('littler', repos='https://cloud.r-project.org')" && \
+    ln -s /opt/R/${R_VERSION}/lib/R/library/littler/bin/r /usr/local/bin/install2.r    
+
+# Install R packages using install.packages in R
+RUN /opt/R/${R_VERSION}/bin/R -e "install.packages(c('spider', 'ape'), repos='https://cloud.r-project.org')"
+
+# Clean up package lists to reduce image size
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 
 ## Julia and Chloe:
 # Install Julia
