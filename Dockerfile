@@ -63,7 +63,7 @@ RUN cd chloe && julia --project=. -e 'using Pkg; Pkg.instantiate();' && cd ..
 #WORKDIR /usr/src/app
 
 # Copy folder files to current directory
-COPY . .
+COPY ../../../Ola_Ubntu/DO%20PRZEGRANIA .
 
 # Install mamba solver for python venv
 RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/download/24.3.0-0/Miniforge3-24.3.0-0-Linux-x86_64.sh"
