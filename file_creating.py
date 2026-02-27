@@ -9,11 +9,11 @@ def file_finder():
 
     # Find a .gff3 file in the current directory
     for file in os.listdir(current_dir):
-        if file.endswith(".gff3"):
+        if file.endswith(".gff3") or file.endswith(".gff"):
             gff3_file = os.path.join(current_dir, file)
             annotation = gffpd.read_gff3(gff3_file)
             return annotation
-    return
+    return None
 
 
 def create_gene_and_highlight(annotation):

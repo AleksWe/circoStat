@@ -4,9 +4,9 @@
 cd chloe
 
 # Annotate consensus and generate file in .gff format:
-julia --project=. chloe.jl annotate --gff *.fasta
+julia --project=. chloe.jl annotate *.fasta
 
 # Copy generated file to main directory, remove lingering fasta files:
-cp *.gff3 *.fasta *.fa ../
+cp *.gff *.fasta *.fa ../
 rm *.fasta *.fa
 cd ..

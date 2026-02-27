@@ -71,7 +71,7 @@ async def upload(options: List[str] = Form(...),
     try:
         subprocess.call(['python3', 'file_creating.py'])
     except FileNotFoundError as e:
-        print("The .gff3 file not found in folder. ERROR:", e)
+        print("The .gff3 or .gff file not found in folder. ERROR:", e)
 
     # Create config metadata.ini and overwrite it
     config = config_creator(meta_data)
