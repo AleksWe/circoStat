@@ -1,12 +1,3 @@
-## Diagnostic nucleotides for Rubia, Galium, and Leptodermis with spider package
-# Loading data
-#setwd("C:/Users/Ania/Desktop/rzeczyKamila/alignment/")
-#install.packages('ape', repos = "http://cran.us.r-project.org")
-
-#my_packages <- c("ape", "spider")                                        # Specify your packages
-#not_installed <- my_packages[!(my_packages %in% installed.packages()[ , "Package"])]    # Extract not installed packages
-#if(length(not_installed)) install.packages(not_installed, repos ='https://cran.rstudio.com/')
-
 library(ape)
 library(spider)
 

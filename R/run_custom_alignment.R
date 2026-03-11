@@ -19,7 +19,10 @@
 #' @importFrom msa msa
 #' @importFrom methods as
 #' @export
-#'
+#' @example test <- run_custom_alignment(samples_table = samples_table,
+#'                            output_file = "Alignment.fasta",
+#'                             method = "ClustalW")
+
 
 run_custom_alignment <- function(samples_table, 
                                  output_file = "Alignment.fasta", 
