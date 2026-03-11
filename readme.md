@@ -1,7 +1,6 @@
 # AutoCircos project
 ![](banner.png)
-ssss
-## halo halo
+
 ## Program goal
 Automatic generation of Circos for visualisation of genomic data based on 
 raw FASTA files containing nucleic acid sequences.
