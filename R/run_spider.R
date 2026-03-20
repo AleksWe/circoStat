@@ -7,14 +7,14 @@
 #' @param alignment_path String. The file path to the FASTA alignment.
 #' @param samples_table Data frame. Must contain a \code{group} column mapping 
 #'   each sequence to a category.
-#' @param window_width Integer. The size of the sliding window (default: 500).
+#' @param window_size Integer. The size of the sliding window (default: 500).
 #' @param jump_size Integer. The step size between windows (default: 50).
 #'
 #' @return A Data frame containing the results of the \code{slideNucDiag} analysis.
 #' @export
 #'
 #' @examples
-#' # results <- run_spider("alignment.fasta", my_samples, window_width = 300)
+#' # results <- run_spider("alignment.fasta", my_samples, window_size = 300)
 run_spider <- function(alignment_path = "", samples_table = NULL, window_size = 500, jump_size = 50) {
   
   if (alignment_path == "" || !file.exists(alignment_path)) {
@@ -38,9 +38,9 @@ run_spider <- function(alignment_path = "", samples_table = NULL, window_size = 
   
   rownames(dna) <- samples_table$group
   
-  nuc_div_list <- slideNucDiag(dna, rownames(dna), width = window_width, interval = jump_size)
+  nuc_div_list <- slideNucDiag(dna, rownames(dna), width = window_size, interval = jump_size)
   
   message("Analysis successful.")
   
-  return(as.data.frame(do.call(rbind, nuc_div_list)))
+  return(as.data.frame(nuc_div_list))
 }
