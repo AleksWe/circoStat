@@ -15,7 +15,7 @@
 #'
 #' @examples
 #' # results <- run_spider("alignment.fasta", my_samples, window_width = 300)
-run_spider <- function(alignment_path = "", samples_table = NULL, window_width = 500, jump_size = 50) {
+run_spider <- function(alignment_path = "", samples_table = NULL, window_size = 500, jump_size = 50) {
   
   if (alignment_path == "" || !file.exists(alignment_path)) {
     stop("Error: The alignment file path is empty or the file does not exist.")
