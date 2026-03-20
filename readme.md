@@ -1,6 +1,15 @@
 # AutoCircos project
 ![](banner.png)
 
+# Create samples_table
+
+```R
+samples_table <- data.frame(FASTA_id = c("Trichoderma_virens","Trichoderma_atroviride","Trichoderma_parareesei","Trichoderma_LY357","Trichoderma_longibrachiatum","Trichoderma_gamsii"),
+                            FASTA_path = c(path1,path2,path3,path4,path5,path6),
+                            group = c("A","A","A","B","B","B"))
+
+```
+
 ## Program goal
 Automatic generation of Circos for visualisation of genomic data based on 
 raw FASTA files containing nucleic acid sequences.
