@@ -11,8 +11,8 @@ samples_table <- data.frame(FASTA_id = c("Trichoderma_virens","Trichoderma_atrov
 ```
 
 ## Program goal
-Automatic generation of Circos for visualisation of genomic data based on 
-raw FASTA files containing nucleic acid sequences.
+Automatic generation of Circos for visualization of genomic data based on either
+raw FASTA files or FASTA alignment file, containing nucleic acid sequences.
 
 ## Overall program flow
 The program contains a single docker image, which consists of:

@@ -1,4 +1,6 @@
 import configparser
+import csv
+import json
 import os
 import shutil
 from pathlib import Path
@@ -38,9 +40,18 @@ def config_writer(meta_data, config):
 
 @app.post("/upload")
 async def upload(options: List[str] = Form(...),
+                 table_data: str = Form(...),
                  files: List[UploadFile] = File(...)):
     # Read the form data from the request
     selected_options = options
+
+    # Create csv file from user input files:
+    data = json.loads(table_data)
+
+    with open('fasta_data.csv', 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["fasta_name", "group"])
+        writer.writerows(data)
 
     # For now, we will just print the options and the file names
     print(f"Chosen options: {selected_options}")
