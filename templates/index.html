@@ -10,8 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     <link href="{{ url_for('static', path='/css/styles.css') }}" rel="stylesheet">
-    <script src="/static/js/fasta_tables.js" defer></script>
-
     <title>CircoStat</title>
 
 </head>
@@ -39,7 +37,8 @@
                 </label></div>
             </div>
         </div>
-        <div class="w-40 col-md-4">
+        <div class="ml-1 fs-5 fw-semibold text-primary">Is your .fasta file an alignment?</div>
+        <div class="w-50 col-md-4">
             <div class="card inset">
                 <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="is_Alignment" id="is_Alignment">
@@ -50,11 +49,10 @@
         </div>
         <script type="text/javascript" src="/static/js/chart_details.js"></script><br>
         <div class="ml-1 fs-5 fw-semibold text-primary">Submit all necessary files:</div>
-        <div class="ml-1 form-text" id="basic-addon4">(such as gene_name.txt, karyotype etc...)</div><br>
+        <div class="ml-1 form-text" id="basic-addon4">You can either:<br> - upload all ".fasta" files and for each selected .fasta file declare your own organism groups via web page <br> - upload your own pre-made data table in ".csv" format (first column is a fasta file name, second is group name).</div><br>
         <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required><br><br>
         <div class="table-responsive">
-            <div id="tableContainer" style="display:none;">
-                <table class="table align-middle">
+                <table class="table align-middle" style="table-layout: auto; width: auto;">
                     <thead>
                     <tr>
                         <th>Fasta name</th>
@@ -63,11 +61,11 @@
                     </thead>
                     <tbody id="fastaTable"></tbody>
                 </table>
-            </div>
         </div>
         <input type="submit" value="Submit" class="ml-1 btn btn-primary">
     </form>
 <link rel="stylesheet" href="/static/js/bootstrap.min.js">
-<script src="/js/datatable_passer.js" defer></script>
+<script src="/static/js/fasta_tables.js" defer></script>
+<script src="/static/js/datatable_passer.js" defer></script>
 </body>
 </html>
