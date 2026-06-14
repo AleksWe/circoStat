@@ -7,6 +7,7 @@
 *.sh text eol=lf
 
 # Random data, results and files to ignore
+/tmp
 /data
 metadata.ini
 circos*.png

@@ -8,7 +8,7 @@ from pathlib import Path
 import uvicorn
 from typing import List
 from fastapi.responses import HTMLResponse
-from fastapi import FastAPI, Form, File, UploadFile, Request
+from fastapi import FastAPI, Form, File, UploadFile, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 import subprocess
 from starlette.staticfiles import StaticFiles
@@ -45,38 +45,64 @@ async def upload(options: List[str] = Form(...),
     # Read the form data from the request
     selected_options = options
 
-    # Create csv file from user input files:
+    # Create a ./tmp directory
+    try:
+        os.makedirs("./tmp/", exist_ok=True)
+    except PermissionError:
+        print("No permission to make a ./tmp/ directory")
+    except OSError as e:
+        print(e)
+
+    # Create csv file from user input table_data:
     data = json.loads(table_data)
-
-    with open('fasta_data.csv', 'w', newline='', encoding='utf-8') as f:
+    with open('./tmp/fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(["fasta_name", "group"])
-        writer.writerows(data)
+        writer.writerow(["FASTA_id", "group", "FASTA_path"])
+        writer.writerows([row + [f"./tmp/{row[0]}"] for row in data])
 
-    # For now, we will just print the options and the file names
-    print(f"Chosen options: {selected_options}")
-    print(f"Uploaded Files: {[file.filename for file in files]}")
+    # TODO: oddzielić input zaczytywania z pliku .csv, który ma uzupełniać tylko frontend
+    #  (nie jest potrzebny później, bo ważniejsze są dane, które są jako tabela na stronie
+    #  - mogą być poprawiane przez użytkownika)
+    # Read files from user input and put them in ./tmp directory
     for file in files:
         try:
             contents = file.file.read()
-            with open(file.filename, "wb") as f:
+            file_name = file.filename
+            if file_name is None:
+                raise HTTPException(status_code=400, detail="Brak nazwy pliku")
+            tmp_path = os.path.join(f'./tmp/{file.filename}')
+            with open(tmp_path, "wb") as f:
                 f.write(contents)
-        except Exception:
-            return {"message": "There was an error uploading the file(s)"}
+        except Exception as e:
+            return f"There was an error uploading the file(s): {e}"
         finally:
             file.file.close()
 
-    # TODO: Chloe to be run only if user chooses to do so:
+    # TODO: Run run_custom_alignment.R - za pomocą uruchomienia R z poziomu pythona
+    #  może za pomocą rpy2? pip install rpy2
+    #### tu musi być wywołanie skryptu R z robieniem alignmentu run_custom_alignment.R
+    #result = subprocess.run(
+    #    ["Rscript", "run_custom_alignment.R"],
+    #    capture_output=True,
+    #    text=True
+    #)
+    #print(result.stdout)
+
+    # TODO: Chloe to be run only if user chooses to make annotations:
+    # TODO: If annotate = False, then check if gff file is sent from user
     # Run Chloe shell to annotate genes:
-    for file in files:
-        if file.filename.endswith('fasta') or file.filename.endswith('fa'):
-            if not os.path.exists('./chloe/'):
-                os.makedirs('./chloe/')
-            shutil.move(file.filename, './chloe/')
-    try:
-        subprocess.run('./chloe_runner.sh')
-    except FileNotFoundError as e:
-        print("Fasta file not found in folder. ERROR:", e)
+    annotate = True
+    if annotate:
+        for file in files:
+            tmp_path = os.path.join(f'./tmp/{file.filename}')
+            if tmp_path and tmp_path.endswith((".fasta",".fa")):
+                if not os.path.exists('./chloe/'):
+                    os.makedirs('./chloe/')
+                shutil.move(tmp_path, './chloe/')
+        try:
+            subprocess.run('./chloe_runner.sh')
+        except FileNotFoundError as e:
+            print("Fasta file not found in folder. ERROR:", e)
 
     # Run script that generates gene_names, highlights, karyotype:
     try:
@@ -131,12 +157,13 @@ async def upload(options: List[str] = Form(...),
     subprocess.run('./circos_project.sh', shell=True)
     return {"message": f"Successfuly uploaded... Circos generator task completed."}
 
-
-# Access the form at 'http://0.0.0.0:8000/' from your browser
 @app.get("/", response_class=HTMLResponse)
 def get_form(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"request": request}
+    )
 
 # Only for testing purposes
 if __name__ == '__main__':
