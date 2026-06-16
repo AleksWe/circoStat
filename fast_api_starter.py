@@ -12,6 +12,7 @@ from fastapi import FastAPI, Form, File, UploadFile, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 import subprocess
 from starlette.staticfiles import StaticFiles
+from rpy2.robjects import r
 
 meta_data = "metadata.ini"
 app = FastAPI()
@@ -78,15 +79,25 @@ async def upload(options: List[str] = Form(...),
         finally:
             file.file.close()
 
-    # TODO: Run run_custom_alignment.R - za pomocą uruchomienia R z poziomu pythona
-    #  może za pomocą rpy2? pip install rpy2
-    #### tu musi być wywołanie skryptu R z robieniem alignmentu run_custom_alignment.R
-    #result = subprocess.run(
-    #    ["Rscript", "run_custom_alignment.R"],
-    #    capture_output=True,
-    #    text=True
-    #)
-    #print(result.stdout)
+    # If passed .fasta file is an alignment, then save it to Alignment.fasta
+    # TODO: On FRONTEND Give info to user that alignment.fasta should have "alignment" in name
+    if 'is_Alignment' in selected_options:
+        alignment = [f for f in files if 'alignment' in f.filename.lower()]
+        if len(alignment) == 0:
+            return {"message": f"No alignment file detected... Please send a single alignment.fasta file."}
+        if len(alignment) > 1:
+            return {"message": f"More than one alignment file detected... Please send a single alignment.fasta file."}
+        os.rename(f'./tmp/{alignment[0].filename}', f'./tmp/Alignment.fasta')
+
+    else:
+        r.source('R/run_custom_alignment.R')
+        run_custom_alignment = r['run_custom_alignment']
+        sample_table = r(f"read.csv('./tmp/fasta_table.csv')")
+        alignment = run_custom_alignment(sample_table)
+        with open (f'./tmp/Alignment.fasta',"wb") as f_out:
+            shutil.copyfileobj(alignment[0].file, f_out)
+
+    # TODO: RUN ALL CALCULATIONS BASED ON USER INPUT
 
     # TODO: Chloe to be run only if user chooses to make annotations:
     # TODO: If annotate = False, then check if gff file is sent from user
