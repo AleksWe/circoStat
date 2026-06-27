@@ -47,26 +47,26 @@ prepare_circos_data <- function(samples_table, alignment_out = "circos_alignment
   
   alignment_path <- file.path(pop_dir, alignment_out)
   
-  message("--- Step 1: Creating Custom Alignment ---")
-  run_custom_alignment(samples_table = samples_table, output_file = alignment_path)
+  #message("--- Step 1: Creating Custom Alignment ---")
+  #run_custom_alignment(samples_table = samples_table, output_file = alignment_path)
   
-  message("--- Step 2: Getting SNP Profiles ---")
+  message("--- Step 1: Getting SNP Profiles ---")
   snp <- get_snp_profiles(alignment_path = alignment_path)
   
-  message("--- Step 3: Calculating Population Statistics (PopGenome) ---")
+  message("--- Step 2: Calculating Population Statistics (PopGenome) ---")
   pop_res <- calculate_pop_stats(fasta_folder = pop_dir, 
                                  samples_table = samples_table, 
                                  window_size = window_size, 
                                  jump_size = jump_size)
   pop_data <- as.data.frame(pop_res$pi_within)
   
-  message("--- Step 4: Running Spider Diagnostic Analysis ---")
+  message("--- Step 3: Running Spider Diagnostic Analysis ---")
   spider_res <- run_spider(alignment_path = alignment_path, 
                            samples_table = samples_table, 
                            window_size = window_size, 
                            jump_size = jump_size)
   
-  message("--- Step 5: Exporting Circos Tracks ---")
+  message("--- Step 4: Exporting Circos Tracks ---")
   
   snp_df <- as.data.frame(snp)
   snp_df$chr <- chr_label

@@ -12,3 +12,5 @@
 metadata.ini
 circos*.png
 Galium_test.chloe.gff
+/Rlibs
+.Rprofile

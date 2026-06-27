@@ -9,7 +9,7 @@ import configparser
 # Selecting info about file names in config.ini
 META_DATA = "metadata.ini"
 # Path
-PATH = "circos.conf"
+PATH = "../circos.conf"
 
 
 def create_logger():
