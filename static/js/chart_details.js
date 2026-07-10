@@ -1,6 +1,6 @@
 function toggleSendButton() {
     const checkbox1 = document.getElementById('SNP').checked;
-    const checkbox2 = document.getElementById('IND').checked;
+    const checkbox2 = document.getElementById('NUC_DIV').checked;
 
     document.getElementById('P_DIV').disabled = !(checkbox1 || checkbox2);
     if (document.getElementById('P_DIV').disabled){

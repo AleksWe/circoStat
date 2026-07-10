@@ -1,32 +1,52 @@
-# Read package list
-lines <- readLines("packages.txt")
+message(">>> INSTALLER RPROFILE: ", Sys.getenv("R_PROFILE_USER"))
+message(">>> INSTALLER LIBPATHS: ", paste(.libPaths(), collapse="; "))
 
-# Split into name + version
+lines <- readLines("../packages.txt")
 pkgs <- sub("==.*", "", lines)
 vers <- sub(".*==", "", lines)
 
-# Set CRAN mirror
 options(repos = c(CRAN = "https://cloud.r-project.org"))
+bioc_only <- c("Biostrings", "msa", "GenomeInfoDbData")
 
-# Ensure BiocManager is available
 if (!requireNamespace("BiocManager", quietly = TRUE)) {
     install.packages("BiocManager")
 }
 
-# Bioconductor-only packages (force install via BiocManager)
-bioc_only <- c("Biostrings", "msa", "GenomeInfoDbData")
+installed <- installed.packages(lib.loc = .libPaths()[1])
 
-for (i in seq_along(pkgs)) {
-  pkg <- pkgs[i]
-  ver <- vers[i]
-
-  message("Installing ", pkg, " @ ", ver)
-
-  if (pkg %in% bioc_only) {
-    # Always install these from Bioconductor
-    BiocManager::install(pkg, ask = FALSE)
-  } else {
-    # CRAN package with version pinning
-    install.packages(pkg, version = ver)
-  }
+needs_install <- function(pkg, ver) {
+    if (!pkg %in% rownames(installed)) return(TRUE)
+    if (installed[pkg, "Version"] != ver) return(TRUE)
+    return(FALSE)
 }
+
+to_install <- pkgs[sapply(seq_along(pkgs), function(i) needs_install(pkgs[i], vers[i]))]
+
+if (length(to_install) == 0) {
+    message(">>> All packages already installed correctly.")
+    quit(save = "no")
+}
+
+message(">>> Installing: ", paste(to_install, collapse = ", "))
+
+for (pkg in to_install) {
+
+    if (pkg == "PopGenome") {
+        message(">>> Installing PopGenome (archived)")
+        install.packages(
+            "https://cran.r-project.org/src/contrib/Archive/PopGenome/PopGenome_2.7.5.tar.gz",
+            repos = NULL,
+            type = "source"
+        )
+        next
+    }
+
+    if (pkg %in% bioc_only) {
+        BiocManager::install(pkg, ask = FALSE)
+        next
+    }
+
+    install.packages(pkg)
+}
+
+message(">>> Installation complete.")

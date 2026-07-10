@@ -16,10 +16,17 @@ RUN apt-get update && \
 FROM bioconductor/bioconductor_docker:RELEASE_3_19
 
 # Install CRAN packages
-RUN R -e "install.packages(c('spider','ape'), repos='https://cloud.r-project.org')"
+RUN R -e "install.packages(c('spider','ape','ff','gtools'), repos='https://cloud.r-project.org')"
 
 # Install Bioconductor packages
 RUN R -e "BiocManager::install(c('Biostrings','msa'), ask=FALSE)"
+
+# Install archived PopGenome
+RUN R -e "install.packages( \
+    'https://cran.r-project.org/src/contrib/Archive/PopGenome/PopGenome_2.7.5.tar.gz', \
+    repos=NULL, \
+    type='source' \
+)"
 
 # Clean up package lists to reduce image size
 RUN apt-get clean && \
@@ -34,7 +41,7 @@ RUN wget https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-
 #RUN curl -fsSL https://install.julialang.org | sh -s -- --yes
 
 # Install Julia packages
-#RUN julia -e 'using Pkg; Pkg.add(["HTTP", "CSV", "DataFrames"])'
+RUN julia -e 'using Pkg; Pkg.add(["BioSequences", "BioAlignments"])'
 
 # Cloning Chloe repository and mandatory Chleo references
 RUN git clone https://github.com/ian-small/chloe && \
@@ -76,4 +83,4 @@ RUN chmod +x chloe_runner.sh
 RUN chmod +x circos_project.sh
 
 # Command to run your application
-CMD ["bash", "-c", "source activate circos && uvicorn fast_api_starter:app --host 0.0.0.0 --port 8000"]
+CMD ["bash", "-c", "source activate circos && uvicorn src.fast_api_starter:app --host 0.0.0.0 --port 8000"]

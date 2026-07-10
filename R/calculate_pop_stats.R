@@ -27,15 +27,15 @@ calculate_pop_stats <- function(fasta_folder,
   GENOME.class <- PopGenome::readData(fasta_folder, format = "FASTA")
   
   actual_ids <- PopGenome::get.individuals(GENOME.class)[[1]]
-  
+
   pop_list <- split(samples_table$FASTA_id, samples_table$group)
   pop_list <- lapply(pop_list, function(x) x[x %in% actual_ids])
-  
+
   valid_pops <- sapply(pop_list, length) >= 2
   if (!any(valid_pops)) {
     stop("Error: No populations found with at least 2 matching individuals in the FASTA files.")
   }
-  
+
   if (sum(valid_pops) < length(pop_list)) {
     warning("Some populations were excluded due to having < 2 individuals: ", 
             paste(names(pop_list)[!valid_pops], collapse = ", "))
@@ -43,7 +43,7 @@ calculate_pop_stats <- function(fasta_folder,
   
   pop_list <- pop_list[valid_pops]
   GENOME.class <- PopGenome::set.populations(GENOME.class, pop_list)
-  
+
   message("Transforming into sliding windows (size: ", window_size, ", jump: ", jump_size, ")...")
   GENOME.class.slide <- PopGenome::sliding.window.transform(
     GENOME.class, 
@@ -52,7 +52,7 @@ calculate_pop_stats <- function(fasta_folder,
     type = 2, 
     whole.data = TRUE
   )
-  
+
   message("Calculating Population Genetics Statistics (this may take a while)...")
   GENOME.class.slide <- PopGenome::F_ST.stats(GENOME.class.slide, detail = TRUE)
   GENOME.class.slide <- PopGenome::diversity.stats(GENOME.class.slide, pi = TRUE)
@@ -72,7 +72,7 @@ calculate_pop_stats <- function(fasta_folder,
   dxy_values <- dxy_raw / window_size
   
   win_names <- GENOME.class.slide@region.names
-  
+
   rownames(pi_within) <- win_names
   
   if (is.matrix(fst_values)) {

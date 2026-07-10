@@ -38,7 +38,7 @@ run_spider <- function(alignment_path = "", samples_table = NULL, window_size = 
   
   rownames(dna) <- samples_table$group
   
-  nuc_div_list <- slideNucDiag(dna, rownames(dna), width = window_size, interval = jump_size)
+  nuc_div_list <- spider::slideNucDiag(dna, rownames(dna), width = window_size, interval = jump_size)
   
   message("Analysis successful.")
   

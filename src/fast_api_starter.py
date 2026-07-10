@@ -1,5 +1,6 @@
 import configparser
 import csv
+import glob
 import json
 import os
 import shutil
@@ -11,12 +12,20 @@ from fastapi import FastAPI, Form, File, UploadFile, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 import subprocess
 from starlette.staticfiles import StaticFiles
+from src.consensus_maker import generate_consensus_fasta
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+os.environ["R_PROFILE_USER"] = str(BASE_DIR / ".Rprofile")
+os.environ["LANG"] = "en_US.UTF-8"
 from rpy2.robjects import r
 from rpy2.rinterface_lib.embedded import RRuntimeError
 
-BASE_DIR = Path(__file__).resolve().parent.parent
 ALIGNMENT_FILE = 'Alignment.fasta'
+CONSENSUS_FILE = 'consensus.fasta'
 TMP_PATH = '../tmp/'
+PY_SCRIPTS_PATH = '../src/'
+RESULT_PATH = '../results/'
+CHLOE_PATH = '../chloe/'
 META_DATA = "metadata.ini"
 R_SCRIPTS = {
     'prepare': '../R/prepare_circos_data.R',
@@ -25,12 +34,19 @@ R_SCRIPTS = {
     'nuc_div': '../R/run_spider.R'
 }
 
+# DEBUG MODE:
 if not os.path.exists("/.dockerenv"):
-    #TODO: sprawdzenie czy pakiety R są zainstalowane - tylko do debug mode
-    #r['source'](str(BASE_DIR / "install_packages.R"))
     print('Program not in docker - debug mode')
-    path = str(BASE_DIR / ".Rprofile")
-    r['source'](path)
+    install_path = (BASE_DIR / "install_packages.R").resolve()
+    install_path = str(install_path).replace("\\", "/")
+    print("Using:", install_path)
+    project_rprofile = str(BASE_DIR / ".Rprofile")
+    project_rlib = str(BASE_DIR / "Rlibs")
+
+    os.environ["R_LIBS_USER"] = project_rlib
+    os.environ["R_LIBS"] = project_rlib  # dodatkowe zabezpieczenie
+
+    #subprocess.run(["Rscript", install_path], check=True)
 
 app = FastAPI()
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
@@ -62,24 +78,30 @@ async def upload(options: List[str] = Form(...),
     # Read the form data from the request
     selected_options = options
 
-    # Create a ../tmp directory
-    try:
-        os.makedirs(TMP_PATH, exist_ok=True)
-    except PermissionError:
-        print("No permission to make a /tmp directory")
-    except OSError as e:
-        print(e)
+    # Create directories
+    # TODO: usunąć ../tmp przy każdorazowym przerwaniu działania programu
+    for path in (TMP_PATH, RESULT_PATH):
+        try:
+            os.makedirs(path, exist_ok=True)
+        except PermissionError:
+            print(f"No permission to create directory: {path}")
+        except OSError as e:
+            print(f"OS error while creating {path}: {e}")
 
     # Create csv file from user input table_data:
     data = json.loads(table_data)
     with open(f'{TMP_PATH}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(["FASTA_id", "group", "FASTA_path"])
-        writer.writerows([row + [f"{TMP_PATH}{row[0]}"] for row in data])
+        writer.writerow(["FASTA_id", "FASTA_path", "group"])
+        writer.writerows([
+            [row[0], f"{TMP_PATH}{row[0]}", row[1]]
+            for row in data
+        ])
 
     # TODO: oddzielić input zaczytywania z pliku .csv, który ma uzupełniać tylko frontend
     #  (nie jest potrzebny później, bo ważniejsze są dane, które są jako tabela na stronie
     #  - mogą być poprawiane przez użytkownika)
+
     # Read files from user input and put them in ./tmp directory
     for file in files:
         try:
@@ -115,40 +137,37 @@ async def upload(options: List[str] = Form(...),
             return {"message": f"Error: {e}"}
 
     try:
-    # TODO: other tracks for P_DIV and NUC_DIV
-        if 'SNP' in selected_options:
-            r.source('../R/get_snp_profiles.R')
-            get_snp = r['get_snp_profiles']
-            get_snp(f"{TMP_PATH}{ALIGNMENT_FILE}")
+        for script in R_SCRIPTS.values():
+            r(f'source("{script}")')
         sample_table = r(f"read.csv('{TMP_PATH}fasta_table.csv')")
-        function_to_run = r['prepare_circos_data']
-        prepared_circos_data = function_to_run(sample_table)
+        preparing_circos_data = r['prepare_circos_data']
+        preparing_circos_data(sample_table, selected_options, ALIGNMENT_FILE)
+        txt_files = glob.glob(os.path.join(PY_SCRIPTS_PATH, "*.txt"))
+        for f in txt_files:
+            try:
+                shutil.move(f, RESULT_PATH)
+            except Exception as e:
+                print(f"Failed to move {f}: {e}")
+        if not txt_files:
+            print("No .txt result files found in current directory.")
     except (RRuntimeError, Exception) as e:
         return {"message": f"Error: {e}"}
-
-    print(prepared_circos_data)
-
-    ## TODO: RUN ALL CALCULATIONS BASED ON USER INPUT
-    #if 'PIV_D' in selected_options:
-    #    piv_D = prepared_circos_data[1]
-    #if 'IND' in selected_options:
-    #    ind = prepared_circos_data[2]
 
     # TODO: Chloe to be run only if user chooses to make annotations:
     # TODO: If annotate = False, then check if gff file is sent from user
     # Run Chloe shell to annotate genes:
     annotate = True
     if annotate:
-        for file in files:
-            tmp_path = os.path.join(f'{TMP_PATH}{file.filename}')
-            if tmp_path and tmp_path.endswith((".fasta",".fa")):
-                if not os.path.exists('../chloe/'):
-                    os.makedirs('../chloe/')
-                shutil.move(tmp_path, '../chloe/')
         try:
-            subprocess.run('../chloe_runner.sh')
+            if not os.path.exists(f'{CHLOE_PATH}'):
+                os.makedirs(f'{CHLOE_PATH}')
+            consensus = generate_consensus_fasta(path=TMP_PATH,file=ALIGNMENT_FILE)
+            with open(f'{CHLOE_PATH}consensus.fasta', 'w') as f:
+                f.write('>consensus.fasta\n')
+                f.write(consensus)
+            subprocess.run(['bash', './chloe_runner.sh'])
         except FileNotFoundError as e:
-            print("Fasta file not found in folder. ERROR:", e)
+            print("ERROR:", e)
 
     # Run script that generates gene_names, highlights, karyotype:
     try:
