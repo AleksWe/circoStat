@@ -6,6 +6,7 @@ from Bio.Data import IUPACData
 def generate_consensus_fasta(path='../tmp',file='Alignment.fasta'):
     try:
         iupac_values = IUPACData.ambiguous_dna_values
+        iupac_values.pop('X', None)
         alignment = AlignIO.read(f"{path}{file}", "fasta")
         consensus = ""
         for i in range(len(alignment[0])):
@@ -15,8 +16,9 @@ def generate_consensus_fasta(path='../tmp',file='Alignment.fasta'):
                 max_value = max(counted_nuc.values())
                 most_common = ''.join([base for base, count in counted_nuc.items() if count == max_value])
                 for value, key in iupac_values.items():
-                    if set(most_common) == set(key):
+                    if set(most_common.upper()) == set(key):
                         consensus += value
+                        break
             else:
                 consensus += '-'
 

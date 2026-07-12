@@ -6,6 +6,4 @@ jinja2==3.1.6
 pandas==2.2.2
 gffpandas~=1.2.0
 rpy2==3.5.16
-
-#library(Biostrings) #2.78
-#library(msa) #1.42
+biopython==1.87

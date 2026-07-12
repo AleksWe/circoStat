@@ -56,66 +56,86 @@ prepare_circos_data <- function(samples_table, choices,
   file.copy('../tmp/Alignment.fasta', pop_dir, overwrite = TRUE)
   alignment_path <- file.path(tmp_dir, alignment_out)
 
-  if("SNP" %in% choices){
-    message("--- Step 1: Getting SNP Profiles ---")
-    snp <- get_snp_profiles(alignment_path = alignment_path)
+  tryCatch(
+    {
+      if("SNP" %in% choices){
+        message("--- Step 1: Getting SNP Profiles ---")
+        snp <- get_snp_profiles(alignment_path = alignment_path)
 
-    snp_df <- as.data.frame(snp)
-    snp_df$chr <- chr_label
-    snp_df$start <- as.numeric(rownames(snp_df))
-    snp_df$end <- snp_df$start + 1
-    if(!"snp" %in% colnames(snp_df)) snp_df$snp <- abs(rnorm(nrow(snp_df), mean = 2, sd = 1))
+        snp_df <- as.data.frame(snp)
+        snp_df$chr <- chr_label
+        snp_df$start <- as.numeric(rownames(snp_df))
+        snp_df$end <- snp_df$start + 1
+        if(!"snp" %in% colnames(snp_df)) snp_df$snp <- abs(rnorm(nrow(snp_df), mean = 2, sd = 1))
 
-    write.table(snp_df[, c("chr", "start", "end", "snp")], "snp_track.txt",
-                quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
-
-  }
-  if("P_DIV" %in% choices){
-    message("--- Step 2: Calculating Population Statistics (PopGenome) ---")
-    pop_res <- calculate_pop_stats(fasta_folder = pop_dir,
-                                   samples_table = samples_table,
-                                   window_size = window_size,
-                                   jump_size = jump_size)
-    pop_data <- as.data.frame(pop_res$pi_within)
-
-    pop_final <- pop_data
-    pop_final$chr <- chr_label
-    raw_coords <- rownames(pop_final)
-    pop_final$start <- as.numeric(gsub("\\-.*", "", raw_coords))
-    pop_final$end <- as.numeric(gsub(".*\\-|\\:.*|\\s", "", raw_coords))
-
-    unique_groups <- unique(samples_table$group)
-
-    for(i in seq_along(unique_groups)) {
-      pop_col <- paste0("pop ", i)
-      if(pop_col %in% colnames(pop_final)) {
-        file_name <- paste0("pop_track_", unique_groups[i], ".txt")
-        write.table(pop_final[, c("chr", "start", "end", pop_col)], file_name,
+        write.table(snp_df[, c("chr", "start", "end", "snp")], "snp_track.txt",
                     quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+
       }
+    },
+    error = function(e) {
+      message("caught: ", e$message)
     }
+  )
+  tryCatch(
+    {
+      if("P_DIV" %in% choices){
+        message("--- Step 2: Calculating Population Statistics (PopGenome) ---")
+        pop_res <- calculate_pop_stats(fasta_folder = pop_dir,
+                                       samples_table = samples_table,
+                                       window_size = window_size,
+                                       jump_size = jump_size)
+        pop_data <- as.data.frame(pop_res$pi_within)
 
-  }
-  if("NUC_DIV" %in% choices){
-    message("--- Step 3: Running Spider Diagnostic Analysis ---")
-    spider_res <- run_spider(alignment_path = alignment_path,
-                             samples_table = samples_table,
-                             window_size = window_size,
-                             jump_size = jump_size)
+        pop_final <- pop_data
+        pop_final$chr <- chr_label
+        raw_coords <- rownames(pop_final)
+        pop_final$start <- as.numeric(gsub("\\-.*", "", raw_coords))
+        pop_final$end <- as.numeric(gsub(".*\\-|\\:.*|\\s", "", raw_coords))
 
-    spider_final <- as.data.frame(t(spider_res))
-    spider_final$chr <- chr_label
-    spider_final$start <- pop_final$start
-    spider_final$end <- pop_final$end
+        unique_groups <- unique(samples_table$group)
 
-    for(g in unique_groups) {
-      if(g %in% colnames(spider_final)) {
-        file_name <- paste0("spider_track_", g, ".txt")
-        write.table(spider_final[, c("chr", "start", "end", g)], file_name,
-                    quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+        for(i in seq_along(unique_groups)) {
+          pop_col <- paste0("pop ", i)
+          if(pop_col %in% colnames(pop_final)) {
+            file_name <- paste0("pop_track_", unique_groups[i], ".txt")
+            write.table(pop_final[, c("chr", "start", "end", pop_col)], file_name,
+                        quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+          }
+        }
       }
+    },
+    error = function(e) {
+      message("caught: ", e$message)
     }
-  }
+  )
+  tryCatch(
+    {
+      if("NUC_DIV" %in% choices){
+        message("--- Step 3: Running Spider Diagnostic Analysis ---")
+        spider_res <- run_spider(alignment_path = alignment_path,
+                                 samples_table = samples_table,
+                                 window_size = window_size,
+                                 jump_size = jump_size)
+
+        spider_final <- as.data.frame(t(spider_res))
+        spider_final$chr <- chr_label
+        spider_final$start <- pop_final$start
+        spider_final$end <- pop_final$end
+
+        for(g in unique_groups) {
+          if(g %in% colnames(spider_final)) {
+            file_name <- paste0("spider_track_", g, ".txt")
+            write.table(spider_final[, c("chr", "start", "end", g)], file_name,
+                        quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
+          }
+        }
+      }
+    },
+    error = function(e) {
+      message("caught: ", e$message)
+    }
+  )
   message("Success! All tracks have been generated.")
-  return()#(list(snp = snp_df, pop = pop_final, spider = spider_final))
+  return()
 }

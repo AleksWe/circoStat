@@ -45,7 +45,14 @@ RUN julia -e 'using Pkg; Pkg.add(["BioSequences", "BioAlignments"])'
 
 # Cloning Chloe repository and mandatory Chleo references
 RUN git clone https://github.com/ian-small/chloe && \
-    git clone --depth 1 https://github.com/ian-small/chloe_references
+    cd chloe && \
+    git checkout 27aac371ce341de0649a5106f3c18a96df4bcf3a && \
+    cd ..
+
+RUN git clone https://github.com/ian-small/chloe_references && \
+    cd chloe_references && \
+    git checkout 37e68271a7af1f799c5b8bcc3781d7abec071f2a && \
+    cd ..
 
 # Change directory to chloe, run `Pkg.instantiate()` to install dependencies based on the Project.toml file
 #RUN julia -e 'import Pkg; Pkg.instantiate()'
