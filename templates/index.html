@@ -15,25 +15,25 @@
 </head>
 <body>
     <div class="shadow p-3 mb-2 bg-primary bg-gradient text-white"><h1>CircoStat - a compact statistical analysis visualizer </h1></div><br>
-    <div class="ml-1 fs-5 fw-semibold text-primary">Select analyses:</div>
-    <div class="ml-1 form-text">P_DIV available only after selecting any of the other two options.</div>
+    <div class="ml-1 fs-5 fw-semibold text-primary">Select circos tracks:</div>
+    <div class="ml-1 form-text">(π) profiling available only after selecting any of the other two options.</div>
     <form action="http://localhost:8000/upload" method="post" enctype="multipart/form-data" id="form2">
-        <div class="w-25 col-md-4">
+        <div class="w-50 col-md-4">
             <div class="card inset">
                 <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="SNP" id="SNP" onchange="toggleSendButton()">
                     <label class="ml-1 fs-5 form-check-label" for="SNP">
-                    SNP
+                    Single nucleotide polymorphism (SNP) profiling
                 </label></div><br>
                 <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="NUC_DIV" id="NUC_DIV" onchange="toggleSendButton()">
                     <label class="ml-1 fs-5 form-check-label" for="NUC_DIV">
-                    NUC_DIV
+                    Sliding Window Diagnostic Site Analysis (Nucleotide diversity)
                 </label></div><br>
                 <div class="form-check">
                     <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="P_DIV" id="P_DIV" disabled>
                     <label class="ml-1 fs-5 form-check-label" for="P_DIV">
-                    P_DIV
+                    Sliding Window Nucleotide Diversity (π) Profiling
                 </label></div>
             </div>
         </div>
@@ -49,7 +49,10 @@
         </div>
         <script type="text/javascript" src="/static/js/chart_details.js"></script><br>
         <div class="ml-1 fs-5 fw-semibold text-primary">Submit all necessary files:</div>
-        <div class="ml-1 form-text" id="basic-addon4">You can either:<br> - upload all ".fasta" files and for each selected .fasta file declare your own organism groups via web page <br> - upload your own pre-made data table in ".csv" format (first column is a fasta file name, second is group name).</div><br>
+        <div class="ml-1 fs-7 fw-semibold">Case 1: By using your existing alignment</div>
+        <div class="ml-1 fs-8" id="basic-addon4"> Upload: <br> (1) your own pre-made alignment .fasta file (file name must include the word <strong>'alignment'</strong>) <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.</div><br>
+        <div class="ml-1 fs-7 fw-semibold">Case 2: By generating a new alignment via CircoStat</div>
+        <div class="ml-1 fs-8" id="basic-addon4"> Alignment is created based on genes provided by the user. Upload: <br> (1) '.fasta' gene files <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.</div><br>
         <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required><br><br>
         <div class="table-responsive">
                 <table class="table align-middle" style="table-layout: auto; width: auto;">

@@ -9,8 +9,10 @@
 # Random data, results and files to ignore
 /tmp
 /data
+/chloe
+/results
+app.log
 metadata.ini
 circos*.png
-Galium_test.chloe.gff
 /Rlibs
 .Rprofile
