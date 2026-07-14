@@ -10,11 +10,9 @@ fileInput.addEventListener("change", (e) => {
   let isPremadeTable = 0;
 
   for (const file of fileInput.files) {
-    // TODO: xslx and xls handling
-    // if (file.name.includes('.xlsx') || file.name.includes('.xls')){
-    //  isPremadeTable++;
-    //  break
-    //}
+
+    console.log(file.name)
+
     if (file.name.includes('.csv')){
       isPremadeTable++;
 
@@ -36,16 +34,9 @@ fileInput.addEventListener("change", (e) => {
           fastaTable.appendChild(row);
         });
       });
-      break
     }
-  }
 
-  if(!isPremadeTable){
-    for (const file of fileInput.files) {
-
-      console.log(file.name)
-
-      if (file.name.includes('.fasta') || (file.name.includes('.fa'))) {
+    else if (file.name.includes('.fasta') || file.name.includes('.fa')){
         const row = document.createElement("tr");
 
         row.innerHTML = `
@@ -54,8 +45,15 @@ fileInput.addEventListener("change", (e) => {
         `;
 
         fastaTable.appendChild(row);
-      }
     }
+
+    else {
+      console.log("Provided file is neither a .fasta or .csv file.")
+    }
+  }
+
+  if (!isPremadeTable){
+    console.log("No .csv file detected.")
   }
 });
 

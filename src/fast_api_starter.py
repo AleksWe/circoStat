@@ -60,9 +60,24 @@ def config_writer(meta_data, metadata):
     with open(meta_data, 'w') as configfile:
         metadata.write(configfile)
 
+def feedback_message(request, context):
+    return templates.TemplateResponse(
+        request=request,
+        name="feedback.html",
+        context=context
+    )
+
+def error_message(request,):
+    return templates.TemplateResponse(
+        request=request,
+        name="feedback.html",
+        context={"title": "Internal app error",
+                 "detail": "Internal application failure. Check log file for more information."}
+    )
 
 @app.post("/upload")
-async def upload(options: List[str] = Form(...),
+async def upload(request: Request,
+                 options: List[str] = Form(...),
                  table_data: str = Form(...),
                  files: List[UploadFile] = File(...)):
     try:
@@ -73,12 +88,36 @@ async def upload(options: List[str] = Form(...),
         for path in (Config.TMP_PATH, Config.RESULT_PATH):
             try:
                 os.makedirs(path, exist_ok=True)
-            except PermissionError:
-                logger.error(f"No permission to create directory: {path}")
-                return {"message": f"Internal application failure. Check logs for more information."}
-            except OSError as e:
-                logger.error(f"OS error while creating {path}: {e}")
-                return {"message": f"Internal application failure. Check logs for more information."}
+            except (PermissionError, OSError) as e:
+                logger.error(f"Failed to create directory {path}: {e}")
+                return error_message(request)
+
+        logging.info("Saving provided files to temporary directories...")
+        no_csv = True
+        try:
+            for file in files:
+                contents = file.file.read()
+                file_name = file.filename
+                if file_name is None:
+                    raise HTTPException(status_code=400, detail="Brak nazwy pliku")
+                elif '.csv' in file_name:
+                    no_csv = False
+                    continue
+                tmp_path = os.path.join(f'{Config.TMP_PATH}{file_name}')
+                with open(tmp_path, "wb") as f:
+                    f.write(contents)
+                file.file.close()
+        except Exception as e:
+            logger.error(f"OS error while creating {path}: {e}")
+            return error_message(request)
+        finally:
+            if no_csv:
+                logger.info(f"No .csv file detected.")
+                return feedback_message(
+                    request,
+            {"title": "No .csv file detected",
+                    "detail": "Upload a .csv that includes your FASTA file names and group assignments."})
+
 
         # Create csv file from user input table_data:
         data = json.loads(table_data)
@@ -90,36 +129,23 @@ async def upload(options: List[str] = Form(...),
                 for row in data
             ])
 
-        # TODO: oddzielić input zaczytywania z pliku .csv, który ma uzupełniać tylko frontend
-        #  (nie jest potrzebny później, bo ważniejsze są dane, które są jako tabela na stronie
-        #  - mogą być poprawiane przez użytkownika)
-
-        # Read files from user input and put them in ./tmp directory
-        for file in files:
-            try:
-                contents = file.file.read()
-                file_name = file.filename
-                if file_name is None:
-                    raise HTTPException(status_code=400, detail="Brak nazwy pliku")
-                tmp_path = os.path.join(f'{Config.TMP_PATH}{file.filename}')
-                with open(tmp_path, "wb") as f:
-                    f.write(contents)
-            except Exception as e:
-                logger.error(f"OS error while creating {path}: {e}")
-                return {"message": f"There was an error uploading the file(s): {e}"}
-            finally:
-                file.file.close()
-
-        # If passed .fasta file is an alignment, then save it to Alignment.fasta
-        # TODO: On FRONTEND Give info to user that alignment.fasta should have "alignment" in name
         if 'is_Alignment' in selected_options:
+            logging.info("Creating alignment from provided .fasta gene files...")
             alignment = [f for f in files if 'alignment' in f.filename.lower()]
             if len(alignment) == 0:
                 logger.info(f"No alignment file detected... Please send a single alignment.fasta file.")
-                return {"message": f"No alignment file detected... Please send a single alignment.fasta file."}
+                return feedback_message(
+                    request,
+                    {"title": "No alignment file detected",
+                     "detail": f"Please send a single alignment.fasta file. "
+                               f"Make sure that the alignment file includes 'alignment' in its name."})
             if len(alignment) > 1:
                 logger.info(f"More than one alignment file detected... Please send a single alignment.fasta file.")
-                return {"message": f"More than one alignment file detected... Please send a single alignment.fasta file."}
+                return feedback_message(
+                    request,
+                    {"title": "No alignment file detected",
+                     "detail": f"More than one alignment file detected. "
+                               f"Make sure only single file includes a word 'alignment'."})
             os.rename(f'{Config.TMP_PATH}{alignment[0].filename}', f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
         else:
             try:
@@ -130,7 +156,7 @@ async def upload(options: List[str] = Form(...),
                 shutil.move(Config.ALIGNMENT_FILE, f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
             except (RRuntimeError, Exception) as e:
                 logger.error(f"Error: {e}")
-                return {"message": f"Internal application failure. Check logs for more information."}
+                return error_message(request)
 
         try:
             for script in Config.R_SCRIPTS.values():
@@ -144,18 +170,15 @@ async def upload(options: List[str] = Form(...),
                     shutil.move(f, Config.RESULT_PATH)
                 except Exception as e:
                     logger.error(f"Failed to move {f}: {e}")
-                    return {"message": f"Internal application failure. Check logs for more information."}
+                    return error_message(request)
             if not txt_files:
                 logger.info("No .txt result files found in current directory.")
         except (RRuntimeError, Exception) as e:
             logger.error(f"Error: {e}")
-            return {"message": f"Internal application failure. Check logs for more information."}
+            return error_message(request)
 
-        # TODO: Chloe to be run only if user chooses to make annotations:
-        # TODO: If annotate = False, then check if gff file is sent from user
-        # Run Chloe shell to annotate genes:
-        annotate = True
-        if annotate:
+        # TODO: Enable sending gff/bam(?) file by user
+        if "annotate" in selected_options:
             logger.info("Running Chloe gene annotator for circos visualisation...")
             try:
                 if not os.path.exists(f'{Config.CHLOE_PATH}'):
@@ -164,10 +187,13 @@ async def upload(options: List[str] = Form(...),
                 with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
                     f.write('>consensus.fasta\n')
                     f.write(consensus)
-                subprocess.run(['bash', './chloe_runner.sh'])
-            except FileNotFoundError as e:
+                subprocess.run(['bash', './chloe_runner.sh'], check=True)
+            except Exception as e:
                 logger.error(f"Error: {e}")
-                return {"message": f"Internal application failure. Check logs for more information."}
+                return error_message(request)
+
+
+
 
         # TODO: DIRE NEED TO CORRECT WHOLE CIRCOS TRACKS GENERATING PIPELINE
         # Run script that generates gene_names, highlights, karyotype:
