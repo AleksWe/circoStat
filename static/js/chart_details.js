@@ -1,10 +1,11 @@
 function toggleSendButton() {
-    const checkbox1 = document.getElementById('SNP').checked;
-    const checkbox2 = document.getElementById('NUC_DIV').checked;
+    const pDivChecked = document.getElementById('P_DIV').checked;
+    const nucDiv = document.getElementById('NUC_DIV');
 
-    document.getElementById('P_DIV').disabled = !(checkbox1 || checkbox2);
-    if (document.getElementById('P_DIV').disabled){
-        document.getElementById("P_DIV").checked = false;
+    nucDiv.disabled = !pDivChecked;
+
+    if (nucDiv.disabled) {
+        nucDiv.checked = false;
     }
 }
 document.getElementById('form2').addEventListener('submit', function(event) {

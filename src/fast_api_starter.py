@@ -6,6 +6,7 @@ from fastapi import FastAPI, Form, File, UploadFile, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 
 from starlette.staticfiles import StaticFiles
+import src.file_creating as fc
 from src.consensus_maker import generate_consensus_fasta
 from src.logging_config import setup_logging
 from src.config import Config
@@ -47,14 +48,13 @@ app.mount(
     name="static",
 )
 
-def config_creator(metadata):
-    if os.path.exists(Config.META_DATA):
-        with open(Config.META_DATA, 'w') as file:
+def config_creator(path_to_metadata):
+    if os.path.exists(path_to_metadata):
+        with open(path_to_metadata, 'w') as file:
             pass
     config_parser = configparser.RawConfigParser()
-    config_parser.read(metadata)
+    config_parser.read(path_to_metadata)
     return config_parser
-
 
 def config_writer(meta_data, metadata):
     with open(meta_data, 'w') as configfile:
@@ -154,7 +154,13 @@ async def upload(request: Request,
                 sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
                 run_custom_alignment(sample_table)
                 shutil.move(Config.ALIGNMENT_FILE, f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
-            except (RRuntimeError, Exception) as e:
+            except (RRuntimeError, FileNotFoundError) as e:
+                logger.error(f"Error: {e}")
+                return feedback_message(
+                    request,
+                    {"title": "Files for generating an alignment have not been provided",
+                     "detail": f"Please send all fasta files necessary for creating an alignment"})
+            except Exception as e:
                 logger.error(f"Error: {e}")
                 return error_message(request)
 
@@ -187,7 +193,8 @@ async def upload(request: Request,
                 with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
                     f.write('>consensus.fasta\n')
                     f.write(consensus)
-                subprocess.run(['bash', './chloe_runner.sh'], check=True)
+                subprocess.run(['bash', './chloe_runner.sh', Config.RESULT_PATH], check=True)
+                fc.create_gene_name(fc.file_finder(f"{Config.RESULT_PATH}"),f"{Config.RESULT_PATH}")
             except Exception as e:
                 logger.error(f"Error: {e}")
                 return error_message(request)
@@ -196,28 +203,19 @@ async def upload(request: Request,
 
 
         # TODO: DIRE NEED TO CORRECT WHOLE CIRCOS TRACKS GENERATING PIPELINE
-        # Run script that generates gene_names, highlights, karyotype:
-        try:
-            subprocess.call(['python3', 'file_creating.py'])
-        except FileNotFoundError as e:
-            print("The .gff3 or .gff file not found in folder. ERROR:", e)
+        logging.info("Creating metadata.ini for circos tracks...")
+        metadata = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
 
-        # Create config metadata.ini and overwrite it
-        metadata = config_creator(Config.META_DATA)
+        for section in ['MetaData', 'OverallPlotInfo']:
+            if not metadata.has_section(section):
+                metadata.add_section(section)
 
-        if not metadata.has_section('MetaData'):
-            metadata.add_section('MetaData')
-        if not metadata.has_section('OverallPlotInfo'):
-            metadata.add_section('OverallPlotInfo')
-
-        # TODO: files below are not to be created based off of option chosen by the user (annotate or not, that is the question) ????
-        for file in os.listdir(os.getcwd()):
-            if file.find('karyotype') >= 0:  # for improvement
-                metadata.set('MetaData', 'karyotype', file)
-            elif file.find('gene_name') >= 0:  # for improvement
-                metadata.set('MetaData', 'gene_name', file)
-            elif file.find('highlights') >= 0:  # for improvement
-                metadata.set('MetaData', 'highlights', file)
+        # TODO: though these files are not created based off options chosen by the user,
+        #       in the current version it's possible that gene_name file won't exist if user choses "no annotation" option
+        #       -> in the future enabling sending gff/bam file by user and requirement that annotation NEEDS to be as a track
+        #          will resolve this
+        for visual_track in ['karyotype', 'highlights', 'gene_name']:
+            metadata.set('MetaData', visual_track, f"{visual_track}.txt")
 
         # TODO: loop below for improvement - after user inserts only single file it will become useless
         #fasta_iter = 1 # variable for future development of more than single fasta file
@@ -250,7 +248,7 @@ async def upload(request: Request,
         return {"message": f"Successfuly uploaded... Circos generator task completed."}
 
     finally:
-        for path in (Config.TMP_PATH, Config.RESULT_PATH):
+        for path in (Config.TMP_PATH, Config.RESULT_PATH, Config.CHLOE_PATH):
             if os.path.exists(path):
                 shutil.rmtree(path, ignore_errors=True)
         logger.info("All temporary files deleted.")

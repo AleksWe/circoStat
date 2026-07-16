@@ -1,48 +1,61 @@
 import os
+import shutil
+
 import gffpandas.gffpandas as gffpd
-import pandas as pd
+from pathlib import Path
 
+def file_finder(path):
+    """
+    Find a .gff/.gff3 file in the current directory
+    :return: .gff/.gff3 file in a dataframe form
+    """
+    if os.path.exists(path):
+        for file in Path(path).iterdir():
+            if file.suffix in ['.gff3','.gff']:
+                return gffpd.read_gff3(file)
+    raise FileNotFoundError("No result directory or annotation (.gff3, .gff) found.")
 
-def file_finder():
-    # Get the current working directory
-    current_dir = os.getcwd()
+def select_attribute(annotation_file, attribute, to_columns=True):
+    """
+    Read annotation and select feature for Circos-compatible track generation.
+    """
+    selected = annotation_file.filter_feature_of_type([attribute])
+    if selected.df.empty:
+        raise ValueError("No features found for length detection")
+    if to_columns:
+        selected = selected.attributes_to_columns()
+    return selected
 
-    # Find a .gff3 file in the current directory
-    for file in os.listdir(current_dir):
-        if file.endswith(".gff3") or file.endswith(".gff"):
-            gff3_file = os.path.join(current_dir, file)
-            annotation = gffpd.read_gff3(gff3_file)
-            return annotation
-    return None
-
-
-def create_gene_and_highlight(annotation):
-    genes = annotation.filter_feature_of_type(['gene'])
-    genes = genes.attributes_to_columns()
-    # Create gene_name.txt:
+def create_gene_name(annotation_file, path):
+    """
+    Generate a Circos-compatible gene_name.txt file based on genome length.
+    """
+    genes = select_attribute(annotation_file, 'gene')
     df_genes = genes[['seq_id', 'start', 'end', 'Name']]
-    df_genes.to_csv('gene_name.txt', index=False, sep=' ', header=None)
-
-    # Create highlight.txt:
-    df_highlight = genes[['seq_id', 'start', 'end']]
-    df_highlight['background_color'] = 'fill_color=vvlgrey,r0=0.20r,r1=1.10r'
-    df_highlight.to_csv('highlights.txt', index=False, sep=' ', header=None)
+    df_genes.to_csv(f'{path}gene_name.txt', index=False, sep=' ', header=None)
     return
 
+def create_highlight(annotation_file, path):
+    """
+    Generate a Circos-compatible highlight.txt file based on genome length.
+    """
+    genes = select_attribute(annotation_file, 'gene')
+    df_highlight = genes[['seq_id', 'start', 'end']]
+    df_highlight.to_csv(f'{path}highlights.txt', index=False, sep=' ', header=None)
+    return
 
-def create_karyotype_snv(annotation):
-    data = annotation.attributes_to_columns()
-    data = data.iloc[0]
-    data = f'chr - {data.seq_id} cp {data.start} {data.end} chrcp'
-    with open('karyotype_SNV.txt', "w") as text_file:
+def create_karyotype(annotation_file, path):
+    """
+    Generate a Circos-compatible karyotype.txt file based on genome length.
+    """
+    selected = annotation_file.df
+    data = f'chr - {selected.seq_id[0]} 1 {selected.start.min()} {selected.end.max()} grey'
+    with open(f'{path}karyotype.txt', "w") as text_file:
         text_file.write(data)
     return
 
-
-def main():
+if __name__ == '__main__':
     annotation = file_finder()
-    create_gene_and_highlight(annotation)
-    create_karyotype_snv(annotation)
-
-
-main()
+    create_gene_name(annotation)
+    create_highlight(annotation)
+    create_karyotype(annotation)

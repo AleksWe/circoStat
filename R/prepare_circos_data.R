@@ -47,12 +47,7 @@ prepare_circos_data <- function(samples_table, choices,
   pop_dir <- file.path(tmp_dir, "pop_input_tmp")
 
   if(!dir.exists(pop_dir)) dir.create(pop_dir)
-  #fasta_ext <- c("fa", "fasta", "fas", "fna", "ffn")
-  #fasta_files <- list.files(
-  #    tmp_dir,
-  #    full.names = TRUE,
-  #    pattern = paste0("\\.(", paste(fasta_ext, collapse="|"), ")$", collapse="")
-  #)
+
   file.copy('../tmp/Alignment.fasta', pop_dir, overwrite = TRUE)
   alignment_path <- file.path(tmp_dir, alignment_out)
 

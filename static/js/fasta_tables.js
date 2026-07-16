@@ -35,23 +35,7 @@ fileInput.addEventListener("change", (e) => {
         });
       });
     }
-
-    else if (file.name.includes('.fasta') || file.name.includes('.fa')){
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-          <td>${file.name}</td>
-          <td><input></td>
-        `;
-
-        fastaTable.appendChild(row);
-    }
-
-    else {
-      console.log("Provided file is neither a .fasta or .csv file.")
-    }
   }
-
   if (!isPremadeTable){
     console.log("No .csv file detected.")
   }
