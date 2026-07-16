@@ -1,11 +1,11 @@
 import configparser, csv, glob, json, os, shutil, uvicorn
 from pathlib import Path
 from typing import List
+from starlette.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi import FastAPI, Form, File, UploadFile, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 
-from starlette.staticfiles import StaticFiles
 import src.file_creating as fc
 from src.consensus_maker import generate_consensus_fasta
 from src.logging_config import setup_logging
@@ -107,6 +107,7 @@ def file_saver(files, request):
                 request,
                 {"title": "No .csv file detected",
                  "detail": "Upload a .csv that includes your FASTA file names and group assignments."})
+    return None
 
 def csv_table_creator(table_data):
     """
@@ -122,6 +123,78 @@ def csv_table_creator(table_data):
             [row[0], f"{Config.TMP_PATH}{row[0]}", row[1]]
             for row in data
         ])
+
+def alignment_checker(files, request):
+    alignment = [f for f in files if 'alignment' in f.filename.lower()]
+    if len(alignment) == 0:
+        logger.info(f"No alignment file detected... Please send a single alignment.fasta file.")
+        return feedback_message(
+            request,
+            {"title": "No alignment file detected",
+             "detail": f"Please send a single alignment.fasta file. "
+                       f"Make sure that the alignment file includes 'alignment' in its name."})
+    if len(alignment) > 1:
+        logger.info(f"More than one alignment file detected... Please send a single alignment.fasta file.")
+        return feedback_message(
+            request,
+            {"title": "No alignment file detected",
+             "detail": f"More than one alignment file detected. "
+                       f"Make sure only single file includes a word 'alignment'."})
+    os.rename(f'{Config.TMP_PATH}{alignment[0].filename}', f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
+    return None
+
+def alignment_creator(request):
+    try:
+        r.source('../R/run_custom_alignment.R')
+        run_custom_alignment = r['run_custom_alignment']
+        sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
+        run_custom_alignment(sample_table)
+        shutil.move(Config.ALIGNMENT_FILE, f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
+    except (RRuntimeError, FileNotFoundError) as e:
+        logger.error(f"Error: {e}")
+        return feedback_message(
+            request,
+            {"title": "Files for generating an alignment have not been provided",
+             "detail": f"Please send all fasta files necessary for creating an alignment"})
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return error_message(request)
+    return None
+
+def statistical_tracks_generator(selected_options, request):
+    try:
+        for script in Config.R_SCRIPTS.values():
+            r(f'source("{script}")')
+        sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
+        preparing_circos_data = r['prepare_circos_data']
+        preparing_circos_data(sample_table, selected_options, Config.ALIGNMENT_FILE)
+        txt_files = glob.glob(os.path.join(Config.PY_SCRIPTS_PATH, "*.txt"))
+        for f in txt_files:
+            try:
+                shutil.move(f, Config.RESULT_PATH)
+            except Exception as e:
+                logger.error(f"Failed to move {f}: {e}")
+                return error_message(request)
+        if not txt_files:
+            logger.info("No .txt result files found in current directory.")
+    except (RRuntimeError, Exception) as e:
+        logger.error(f"Error: {e}")
+        return error_message(request)
+    return None
+
+def gene_annotator(request):
+    try:
+        if not os.path.exists(f'{Config.CHLOE_PATH}'):
+            os.makedirs(f'{Config.CHLOE_PATH}')
+        consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
+        with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
+            f.write('>consensus.fasta\n')
+            f.write(consensus)
+        subprocess.run(['bash', './chloe_runner.sh', Config.RESULT_PATH], check=True)
+        fc.create_gene_name(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return error_message(request)
 
 def config_writer(meta_data, metadata):
     """
@@ -159,102 +232,53 @@ def error_message(request):
                  "detail": "Internal application failure. Check log file for more information."}
     )
 
+@app.get("/", response_class=HTMLResponse)
+def get_form(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"request": request}
+    )
+
 @app.post("/upload")
 async def upload(request: Request,
                  options: List[str] = Form(...),
                  table_data: str = Form(...),
                  files: List[UploadFile] = File(...)):
     try:
-        logging.info("Reading the form data from request...")
+        logger.info("Reading the form data from request...")
         selected_options = options
 
-        logging.info("Creating all temporary directories...")
+        logger.info("Creating all temporary directories...")
         tmp_creator(request)
 
-        logging.info("Creating metadata.ini for circos tracks...")
+        logger.info("Creating metadata.ini for circos tracks...")
         metadata = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
 
-        logging.info("Checking for .csv file and saving all provided files to temporary directories...")
+        logger.info("Checking for .csv file and saving all provided files to temporary directories...")
         file_saver(files, request)
 
-        logging.info("Creating files based on data provided from user...")
+        logger.info("Creating files based on data provided from user...")
         csv_table_creator(table_data)
 
         if 'is_Alignment' in selected_options:
-            logging.info("Creating alignment from provided .fasta gene files...")
-            alignment = [f for f in files if 'alignment' in f.filename.lower()]
-            if len(alignment) == 0:
-                logger.info(f"No alignment file detected... Please send a single alignment.fasta file.")
-                return feedback_message(
-                    request,
-                    {"title": "No alignment file detected",
-                     "detail": f"Please send a single alignment.fasta file. "
-                               f"Make sure that the alignment file includes 'alignment' in its name."})
-            if len(alignment) > 1:
-                logger.info(f"More than one alignment file detected... Please send a single alignment.fasta file.")
-                return feedback_message(
-                    request,
-                    {"title": "No alignment file detected",
-                     "detail": f"More than one alignment file detected. "
-                               f"Make sure only single file includes a word 'alignment'."})
-            os.rename(f'{Config.TMP_PATH}{alignment[0].filename}', f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
+            logger.info("Creating alignment from provided .fasta gene files...")
+            alignment_checker(files, request)
         else:
-            try:
-                r.source('../R/run_custom_alignment.R')
-                run_custom_alignment = r['run_custom_alignment']
-                sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
-                run_custom_alignment(sample_table)
-                shutil.move(Config.ALIGNMENT_FILE, f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
-            except (RRuntimeError, FileNotFoundError) as e:
-                logger.error(f"Error: {e}")
-                return feedback_message(
-                    request,
-                    {"title": "Files for generating an alignment have not been provided",
-                     "detail": f"Please send all fasta files necessary for creating an alignment"})
-            except Exception as e:
-                logger.error(f"Error: {e}")
-                return error_message(request)
+            alignment_creator(request)
 
-        try:
-            for script in Config.R_SCRIPTS.values():
-                r(f'source("{script}")')
-            sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
-            preparing_circos_data = r['prepare_circos_data']
-            preparing_circos_data(sample_table, selected_options, Config.ALIGNMENT_FILE)
-            txt_files = glob.glob(os.path.join(Config.PY_SCRIPTS_PATH, "*.txt"))
-            for f in txt_files:
-                try:
-                    shutil.move(f, Config.RESULT_PATH)
-                except Exception as e:
-                    logger.error(f"Failed to move {f}: {e}")
-                    return error_message(request)
-            if not txt_files:
-                logger.info("No .txt result files found in current directory.")
-        except (RRuntimeError, Exception) as e:
-            logger.error(f"Error: {e}")
-            return error_message(request)
+        logger.info("Processing all data for statistical analysis with circos track generation...")
+        statistical_tracks_generator(selected_options, request)
 
         # TODO: Enable sending gff/bam(?) file by user
         if "annotate" in selected_options:
             logger.info("Running Chloe gene annotator for circos visualisation...")
-            try:
-                if not os.path.exists(f'{Config.CHLOE_PATH}'):
-                    os.makedirs(f'{Config.CHLOE_PATH}')
-                consensus = generate_consensus_fasta(path=Config.TMP_PATH,file=Config.ALIGNMENT_FILE)
-                with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
-                    f.write('>consensus.fasta\n')
-                    f.write(consensus)
-                subprocess.run(['bash', './chloe_runner.sh', Config.RESULT_PATH], check=True)
-                fc.create_gene_name(fc.file_finder(f"{Config.RESULT_PATH}"),f"{Config.RESULT_PATH}")
-            except Exception as e:
-                logger.error(f"Error: {e}")
-                return error_message(request)
+            gene_annotator(request)
 
 
 
 
         # TODO: DIRE NEED TO CORRECT WHOLE CIRCOS TRACKS GENERATING PIPELINE
-
         for section in ['MetaData', 'OverallPlotInfo']:
             if not metadata.has_section(section):
                 metadata.add_section(section)
@@ -302,13 +326,6 @@ async def upload(request: Request,
                 shutil.rmtree(path, ignore_errors=True)
         logger.info("All temporary files deleted.")
 
-@app.get("/", response_class=HTMLResponse)
-def get_form(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={"request": request}
-    )
 
 # Only for testing purposes
 if __name__ == '__main__':
