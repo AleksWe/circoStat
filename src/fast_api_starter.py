@@ -48,7 +48,28 @@ app.mount(
     name="static",
 )
 
+def tmp_creator(request):
+    """
+    Creates all necessary temporary directories.
+    :param: Request
+        The incoming FastAPI request.
+    :return: TemplateResponse
+        Rendered HTML error page.
+    """
+    for path in (Config.TMP_PATH, Config.RESULT_PATH):
+        try:
+            os.makedirs(path, exist_ok=True)
+        except (PermissionError, OSError) as e:
+            logger.error(f"Failed to create directory {path}: {e}")
+            return error_message(request)
+
 def config_creator(path_to_metadata):
+    """
+    Creates or loads a configuration file at the given path.
+
+    If the file does not exist, an empty file is created. The function then
+    returns a RawConfigParser instance with the file's contents loaded.
+    """
     if os.path.exists(path_to_metadata):
         with open(path_to_metadata, 'w') as file:
             pass
@@ -56,18 +77,81 @@ def config_creator(path_to_metadata):
     config_parser.read(path_to_metadata)
     return config_parser
 
+def file_saver(files, request):
+    """
+    :param files:
+    :param request:
+    :return: TemplateResponse
+        Rendered HTML error or feedback page.
+    """
+    no_csv = True
+    try:
+        for file in files:
+            contents = file.file.read()
+            if file.filename is None:
+                raise HTTPException(status_code=400, detail="No file name")
+            elif '.csv' in file.filename:
+                no_csv = False
+                continue
+            tmp_path = os.path.join(f'{Config.TMP_PATH}{file.filename}')
+            with open(tmp_path, "wb") as f:
+                f.write(contents)
+            file.file.close()
+    except Exception as e:
+        logger.error(f"OS error while creating path: {e}")
+        return error_message(request)
+    finally:
+        if no_csv:
+            logger.info(f"No .csv file detected.")
+            return feedback_message(
+                request,
+                {"title": "No .csv file detected",
+                 "detail": "Upload a .csv that includes your FASTA file names and group assignments."})
+
+def csv_table_creator(table_data):
+    """
+    Create .csv file from user web page table.
+    :param table_data:
+    :return:
+    """
+    data = json.loads(table_data)
+    with open(f'{Config.TMP_PATH}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["FASTA_id", "FASTA_path", "group"])
+        writer.writerows([
+            [row[0], f"{Config.TMP_PATH}{row[0]}", row[1]]
+            for row in data
+        ])
+
 def config_writer(meta_data, metadata):
+    """
+    Saves a configuration file based on current metadata variable.
+    """
     with open(meta_data, 'w') as configfile:
         metadata.write(configfile)
 
 def feedback_message(request, context):
+    """
+    Returns feedback with current app state using the 'feedback.html' template.
+    :param: Request
+        The incoming FastAPI request.
+    :return: TemplateResponse
+        Rendered HTML error page.
+    """
     return templates.TemplateResponse(
         request=request,
         name="feedback.html",
         context=context
     )
 
-def error_message(request,):
+def error_message(request):
+    """
+    Returns an error page response using the 'feedback.html' template.
+    :param: Request
+        The incoming FastAPI request.
+    :return: TemplateResponse
+        Rendered HTML error page.
+    """
     return templates.TemplateResponse(
         request=request,
         name="feedback.html",
@@ -85,49 +169,16 @@ async def upload(request: Request,
         selected_options = options
 
         logging.info("Creating all temporary directories...")
-        for path in (Config.TMP_PATH, Config.RESULT_PATH):
-            try:
-                os.makedirs(path, exist_ok=True)
-            except (PermissionError, OSError) as e:
-                logger.error(f"Failed to create directory {path}: {e}")
-                return error_message(request)
+        tmp_creator(request)
 
-        logging.info("Saving provided files to temporary directories...")
-        no_csv = True
-        try:
-            for file in files:
-                contents = file.file.read()
-                file_name = file.filename
-                if file_name is None:
-                    raise HTTPException(status_code=400, detail="Brak nazwy pliku")
-                elif '.csv' in file_name:
-                    no_csv = False
-                    continue
-                tmp_path = os.path.join(f'{Config.TMP_PATH}{file_name}')
-                with open(tmp_path, "wb") as f:
-                    f.write(contents)
-                file.file.close()
-        except Exception as e:
-            logger.error(f"OS error while creating {path}: {e}")
-            return error_message(request)
-        finally:
-            if no_csv:
-                logger.info(f"No .csv file detected.")
-                return feedback_message(
-                    request,
-            {"title": "No .csv file detected",
-                    "detail": "Upload a .csv that includes your FASTA file names and group assignments."})
+        logging.info("Creating metadata.ini for circos tracks...")
+        metadata = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
 
+        logging.info("Checking for .csv file and saving all provided files to temporary directories...")
+        file_saver(files, request)
 
-        # Create csv file from user input table_data:
-        data = json.loads(table_data)
-        with open(f'{Config.TMP_PATH}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(["FASTA_id", "FASTA_path", "group"])
-            writer.writerows([
-                [row[0], f"{Config.TMP_PATH}{row[0]}", row[1]]
-                for row in data
-            ])
+        logging.info("Creating files based on data provided from user...")
+        csv_table_creator(table_data)
 
         if 'is_Alignment' in selected_options:
             logging.info("Creating alignment from provided .fasta gene files...")
@@ -203,8 +254,6 @@ async def upload(request: Request,
 
 
         # TODO: DIRE NEED TO CORRECT WHOLE CIRCOS TRACKS GENERATING PIPELINE
-        logging.info("Creating metadata.ini for circos tracks...")
-        metadata = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
 
         for section in ['MetaData', 'OverallPlotInfo']:
             if not metadata.has_section(section):
