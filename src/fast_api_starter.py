@@ -51,8 +51,7 @@ app.mount(
 def tmp_creator(request):
     """
     Creates all necessary temporary directories.
-    :param: Request
-        The incoming FastAPI request.
+    :param request: Incoming FastAPI request.
     :return: TemplateResponse
         Rendered HTML error page.
     """
@@ -66,7 +65,6 @@ def tmp_creator(request):
 def config_creator(path_to_metadata):
     """
     Creates or loads a configuration file at the given path.
-
     If the file does not exist, an empty file is created. The function then
     returns a RawConfigParser instance with the file's contents loaded.
     """
@@ -79,10 +77,11 @@ def config_creator(path_to_metadata):
 
 def file_saver(files, request):
     """
-    :param files:
-    :param request:
-    :return: TemplateResponse
-        Rendered HTML error or feedback page.
+    Saves uploaded files to a temporary directory and checks for a CSV file.
+    :param files: Uploaded files from the web API.
+    :param request: Incoming FastAPI request.
+    :return: TemplateResponse or None
+        Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     no_csv = True
     try:
@@ -111,9 +110,8 @@ def file_saver(files, request):
 
 def csv_table_creator(table_data):
     """
-    Create .csv file from user web page table.
-    :param table_data:
-    :return:
+    Creates .csv file from user web page table.
+    :param table_data: Uploaded data table from the web API.
     """
     data = json.loads(table_data)
     with open(f'{Config.TMP_PATH}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
@@ -125,6 +123,13 @@ def csv_table_creator(table_data):
         ])
 
 def alignment_checker(files, request):
+    """
+    Checks if only one alignment file was provided by user.
+    :param files: Uploaded files from the web API.
+    :param request: Incoming FastAPI request.
+    :return: TemplateResponse or None
+        Rendered HTML feedback page when validation fails; otherwise None.
+    """
     alignment = [f for f in files if 'alignment' in f.filename.lower()]
     if len(alignment) == 0:
         logger.info(f"No alignment file detected... Please send a single alignment.fasta file.")
@@ -144,6 +149,12 @@ def alignment_checker(files, request):
     return None
 
 def alignment_creator(request):
+    """
+    Creates an alignment based on fasta files provided by the user.
+    :param request: Incoming FastAPI request.
+    :return: TemplateResponse or None
+        Rendered HTML error/feedback page when validation fails; otherwise None.
+    """
     try:
         r.source('../R/run_custom_alignment.R')
         run_custom_alignment = r['run_custom_alignment']
@@ -162,6 +173,13 @@ def alignment_creator(request):
     return None
 
 def statistical_tracks_generator(selected_options, request):
+    """
+    Generates ready-to-use circos compatible tracks using custom R scripts for statistical analyses.
+    :param selected_options: Options checked by the user via webpage.
+    :param request: Incoming FastAPI request.
+    :return: TemplateResponse or None
+        Rendered HTML error/feedback page when validation fails; otherwise None.
+    """
     try:
         for script in Config.R_SCRIPTS.values():
             r(f'source("{script}")')
@@ -183,6 +201,12 @@ def statistical_tracks_generator(selected_options, request):
     return None
 
 def gene_annotator(request):
+    """
+    Generates gene annotation for gene name track on circos using Chloe.jl.
+    :param request: Incoming FastAPI request.
+    :return: TemplateResponse or None
+        Rendered HTML error/feedback page when validation fails; otherwise None.
+    """
     try:
         if not os.path.exists(f'{Config.CHLOE_PATH}'):
             os.makedirs(f'{Config.CHLOE_PATH}')
@@ -195,6 +219,7 @@ def gene_annotator(request):
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
+    return None
 
 def config_writer(meta_data, metadata):
     """
@@ -206,8 +231,7 @@ def config_writer(meta_data, metadata):
 def feedback_message(request, context):
     """
     Returns feedback with current app state using the 'feedback.html' template.
-    :param: Request
-        The incoming FastAPI request.
+    :param request: The incoming FastAPI request.
     :return: TemplateResponse
         Rendered HTML error page.
     """
@@ -220,8 +244,7 @@ def feedback_message(request, context):
 def error_message(request):
     """
     Returns an error page response using the 'feedback.html' template.
-    :param: Request
-        The incoming FastAPI request.
+    :param request: The incoming FastAPI request.
     :return: TemplateResponse
         Rendered HTML error page.
     """
