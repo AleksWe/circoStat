@@ -273,22 +273,30 @@ async def upload(request: Request,
         selected_options = options
 
         logger.info("Creating all temporary directories...")
-        tmp_creator(request)
+        response = tmp_creator(request)
+        if response is not None:
+            return response
 
         logger.info("Creating metadata.ini for circos tracks...")
         metadata = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
 
         logger.info("Checking for .csv file and saving all provided files to temporary directories...")
-        file_saver(files, request)
+        response = file_saver(files, request)
+        if response is not None:
+            return response
 
         logger.info("Creating files based on data provided from user...")
         csv_table_creator(table_data)
 
         if 'is_Alignment' in selected_options:
             logger.info("Creating alignment from provided .fasta gene files...")
-            alignment_checker(files, request)
+            response = alignment_checker(files, request)
+            if response is not None:
+                return response
         else:
-            alignment_creator(request)
+            response = alignment_creator(request)
+            if response is not None:
+                return response
 
         logger.info("Processing all data for statistical analysis with circos track generation...")
         statistical_tracks_generator(selected_options, request)
@@ -296,10 +304,9 @@ async def upload(request: Request,
         # TODO: Enable sending gff/bam(?) file by user
         if "annotate" in selected_options:
             logger.info("Running Chloe gene annotator for circos visualisation...")
-            gene_annotator(request)
-
-
-
+            response = gene_annotator(request)
+            if response is not None:
+                return response
 
         # TODO: DIRE NEED TO CORRECT WHOLE CIRCOS TRACKS GENERATING PIPELINE
         for section in ['MetaData', 'OverallPlotInfo']:
