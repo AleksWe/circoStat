@@ -1,6 +1,4 @@
 import os
-import shutil
-
 import gffpandas.gffpandas as gffpd
 from pathlib import Path
 
@@ -53,9 +51,3 @@ def create_karyotype(annotation_file, path):
     with open(f'{path}karyotype.txt', "w") as text_file:
         text_file.write(data)
     return
-
-if __name__ == '__main__':
-    annotation = file_finder()
-    create_gene_name(annotation)
-    create_highlight(annotation)
-    create_karyotype(annotation)

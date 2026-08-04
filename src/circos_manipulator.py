@@ -1,29 +1,18 @@
 import logging
-import sys
-
 import pandas as pd
-
 import plotting as p
 import configparser
 
-# Selecting info about file names in config.ini
-META_DATA = "metadata.ini"
 # Path
-PATH = "../circos.conf"
-
-
-def create_logger():
-    # Create a handler
-    log = logging.getLogger('test')
-    handler = logging.StreamHandler(sys.stdout)
-    log.addHandler(handler)
-    logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
-
-
-def meta_data(META_DATA):
-    configParser = configparser.RawConfigParser()
-    configParser.read(META_DATA)
-    return configParser
+def meta_data(path):
+    """
+    Read from metadata.ini file
+    :param path: Path to metadata.ini file
+    :return: config file
+    """
+    config_parser = configparser.RawConfigParser()
+    config_parser.read(path)
+    return config_parser
 
 
 def plot_finder(circos_conf):
@@ -102,24 +91,23 @@ def plot_generator(config):
 def position_modifier(circos_conf):
     logging.info("   INFO: starting position modifications \n")
     new_string = plot_finder(circos_conf)
-    return circos_conf
+    return circos_conf 
 
 
-def config_writer(new_config, name):
+def config_writer(new_config, name = '../circos.conf'):
+    """
+    Write a newly generated circos.conf to file
+    :param new_config: contains data from 
+    :param name:
+    """
     with open(name, "w", newline="") as file:
         file.write(new_config)
 
 
 def main():
-    # Calling function to log every step of the way
-    # create_logger()
-    # logging.info("   INFO: starting data reading")
-
     # Creating config variable that holds all names from META_DATA
-    config = meta_data(META_DATA)
-
-    # Write a newly generated circos.conf to file
-    config_writer(plot_generator(config), PATH)
+    config = meta_data()
+    config_writer(plot_generator(config), '../circos.conf')
 
 
 if __name__ == '__main__':

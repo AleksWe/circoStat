@@ -12,3 +12,4 @@ class Config:
         'pdiv': '../R/calculate_pop_stats.R',
         'nuc_div': '../R/run_spider.R'
     }
+    ALL_TEMPORARY = [TMP_PATH, RESULT_PATH, CHLOE_PATH]

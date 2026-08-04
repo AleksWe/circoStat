@@ -7,6 +7,7 @@ from fastapi import FastAPI, Form, File, UploadFile, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 
 import src.file_creating as fc
+import src.circos_manipulator as cm
 from src.consensus_maker import generate_consensus_fasta
 from src.logging_config import setup_logging
 from src.config import Config
@@ -221,12 +222,30 @@ def gene_annotator(request):
         return error_message(request)
     return None
 
-def config_writer(meta_data, metadata):
+def circos_creator(request, name="circos.conf"):
+    """
+    Reads from metadata.ini file, creates and circos.conf file.
+    """
+    try:
+        metadata_file = cm.meta_data(Config.META_DATA)
+        new_config = cm.plot_generator(metadata_file)
+        cm.config_writer(new_config, name)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return error_message(request)
+    return None
+
+def config_writer(request, meta_data, metadata):
     """
     Saves a configuration file based on current metadata variable.
     """
-    with open(meta_data, 'w') as configfile:
-        metadata.write(configfile)
+    try:
+        with open(meta_data, 'w') as configfile:
+            metadata.write(configfile)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return error_message(request)
+    return None
 
 def feedback_message(request, context):
     """
@@ -308,50 +327,42 @@ async def upload(request: Request,
             if response is not None:
                 return response
 
-        # TODO: DIRE NEED TO CORRECT WHOLE CIRCOS TRACKS GENERATING PIPELINE
-        for section in ['MetaData', 'OverallPlotInfo']:
-            if not metadata.has_section(section):
-                metadata.add_section(section)
-
         # TODO: though these files are not created based off options chosen by the user,
-        #       in the current version it's possible that gene_name file won't exist if user choses "no annotation" option
-        #       -> in the future enabling sending gff/bam file by user and requirement that annotation NEEDS to be as a track
+        #       in the current version it's possible that gene_name file won't exist if user chooses "no annotation" option
+        #       -> in the future enabling sending gff/bam file by user and requirement that annotation NEEDS to be a track
         #          will resolve this
+        logger.info("Overwriting metadata for circos generation...")
+        section = 'FilesConfig'
+        metadata.add_section(section)
         for visual_track in ['karyotype', 'highlights', 'gene_name']:
-            metadata.set('MetaData', visual_track, f"{visual_track}.txt")
+            metadata.set(section, visual_track, f"{visual_track}.txt")
 
-        # TODO: loop below for improvement - after user inserts only single file it will become useless
-        #fasta_iter = 1 # variable for future development of more than single fasta file
-        for file in files:
-            if file.filename.endswith('fasta'):
-                metadata.set('MetaData', f'fasta', file.filename)
-            for option in selected_options:
-                if file.filename.find('snp') >= 0 and option == 'SNP':
-                    if file.filename.endswith('perc.txt'):
-                        metadata.set('OverallPlotInfo', f'file_snp_perc', file.filename)
-                    elif file.filename.endswith('snp.txt'):
-                        metadata.set('OverallPlotInfo', f'file_snp', file.filename)
-                    elif file.filename.endswith('mt.txt'):
-                        metadata.set('OverallPlotInfo', f'file_snp_mt', file.filename)
-                elif file.filename.find('ind') >= 0 and option == 'IND':
-                    if file.filename.endswith('perc.txt'):
-                        metadata.set('OverallPlotInfo', f'file_ind_perc', file.filename)
-                    elif file.filename.endswith('ind.txt'):
-                        metadata.set('OverallPlotInfo', f'file_ind', file.filename)
-                    elif file.filename.endswith('mt.txt'):
-                        metadata.set('OverallPlotInfo', f'file_ind_mt', file.filename)
-                elif file.filename.find('popGenome') >= 0 and option == 'P_DIV':
-                    metadata.set('OverallPlotInfo', f'file_p_div', file.filename)
+        for option in selected_options:
+            if option == 'SNP' and any(Path(Config.RESULT_PATH).glob(f"*snp*")):
+                metadata.set(section, f'SNP', 'snp_track.txt')
+            elif option == 'P_DIV':
+                for file in Path(Config.RESULT_PATH).glob(f"*pop_track_*"):
+                    metadata.set(section, f"P_DIV_{file.name.split("_", 2)[2].rsplit(".txt", 1)[0]}", f"{file}")
+            elif option == 'NUC_DIV':
+                for file in Path(Config.RESULT_PATH).glob(f"*spider_track_*"):
+                    metadata.set(section, f"NUC_DIV_{file.name.split("_", 2)[2].rsplit(".txt", 1)[0]}", f"{file}")
 
-        # Overwriting metadata.ini file:
-        config_writer(Config.META_DATA, metadata)
+        response = config_writer(request, Config.META_DATA, metadata)
+        if response is not None:
+            return response
 
-        # Run the circos shell file:
-        subprocess.run('../circos_project.sh', shell=True)
-        return {"message": f"Successfuly uploaded... Circos generator task completed."}
+        logger.info("Running circos generator pipeline...")
+        response = circos_creator(request)
+        if response is not None:
+            return response
+
+        return feedback_message(
+            request,
+            {"title": "CircoStat pipeline completed successfully",
+             "detail": f"Processing completed successfully. Results have been saved to:"})
 
     finally:
-        for path in (Config.TMP_PATH, Config.RESULT_PATH, Config.CHLOE_PATH):
+        for path in Config.ALL_TEMPORARY:
             if os.path.exists(path):
                 shutil.rmtree(path, ignore_errors=True)
         logger.info("All temporary files deleted.")
