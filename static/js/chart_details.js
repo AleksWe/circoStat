@@ -8,7 +8,8 @@ function toggleSendButton() {
         nucDiv.checked = false;
     }
 }
-document.getElementById('form2').addEventListener('submit', function(event) {
+
+document.getElementById('form2').addEventListener('submit', function (event) {
     var checkboxes = this.querySelectorAll('input[type="checkbox"]');
     var allUnchecked = Array.from(checkboxes).every(checkbox => !checkbox.checked);
 

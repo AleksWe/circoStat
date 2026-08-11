@@ -23,7 +23,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const form = document.querySelector("#form2");
 
     form.addEventListener("submit", function () {
-        const tableData = getTableData();
+        const tableData = [...document.querySelectorAll("#fastaTable tr")]
+            .map(tr => [...tr.querySelectorAll("td")].map(td => td.textContent.trim()));
 
         console.log(getTableData());
 

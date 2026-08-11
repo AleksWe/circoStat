@@ -63,8 +63,9 @@
         <div class="ml-1 fs-8" id="basic-addon4"> Upload: <br> (1) your own pre-made alignment .fasta file (file name must include the word <strong>'alignment'</strong>) <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.</div><br>
         <div class="ml-1 fs-7 fw-semibold">Case 2: By generating a new alignment via CircoStat</div>
         <div class="ml-1 fs-8" id="basic-addon4"> Alignment is created based on genes provided by the user. Upload: <br> (1) '.fasta' gene files <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.</div><br>
-        <input type="submit" value="Submit" class="ml-1 btn btn-primary">
-        <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required><br><br>
+        <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required>
+        <input type="submit" value="Submit" class="ml-1 btn btn-primary"><br>
+        <ul id="fileList" class="list-group w-50"></ul><br>
         <div class="table-responsive">
                 <table class="table align-middle" style="table-layout: auto; width: auto;">
                     <thead>

@@ -1,57 +1,111 @@
 const fileInput = document.getElementById("fileInput");
 const fastaTable = document.getElementById("fastaTable");
+let storedFiles = [];
 
-fileInput.addEventListener("change", (e) => {
+document.getElementById("fileInput").addEventListener("change", (event) => {
+    const newFiles = Array.from(event.target.files);
+    newFiles.forEach(file => {
+        if (!storedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            storedFiles.push(file);
+        }
+    });
+    renderFileList();
+    rebuildFastaTable();
+    console.log(storedFiles);
+});
 
-  console.log("files:", fileInput.files);
+function renderFileList() {
+    const list = document.getElementById("fileList");
+    list.innerHTML = "";
 
-  fastaTable.innerHTML = "";
+    storedFiles.forEach((file, index) => {
+        const li = document.createElement("li");
+        li.className = "list-group-item list-group-item-light d-flex justify-content-between align-items-center";
+        li.innerHTML = `
+            <span>${file.name}</span>
+            <button class="btn btn-primary btn-sm" data-index="${index}">
+                X
+            </button>
+        `;
+        list.appendChild(li);
+    });
 
-  let isPremadeTable = 0;
+    document.querySelectorAll("#fileList button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const idx = btn.dataset.index;
+            storedFiles.splice(idx, 1);
+            renderFileList();
+        });
+    });
+}
 
-  for (const file of fileInput.files) {
+function rebuildFastaTable() {
+    fastaTable.innerHTML = "";
+    let isPremadeTable = 0;
 
-    console.log(file.name)
+    for (const file of storedFiles) {
+        if (file.name.includes('.csv')) {
+            isPremadeTable++;
+            file.text().then(text => {
+                const rows = text.split(/\r?\n/);
 
-    if (file.name.includes('.csv')){
-      isPremadeTable++;
+                rows.forEach(line => {
+                    if (!line.trim()) return;
 
-      file.text().then(text => {
-        const rows = text.split(/\r?\n/);
-        console.log(rows);
-
-        rows.forEach(line => {
-          if (!line.trim()) return;
-
-          const { left, right } = splitLine(line);
-
-          const row = document.createElement("tr");
-          row.innerHTML = `
+                    const {left, right} = splitLine(line);
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
                     <td>${left}</td>
                     <td><input class="form-control form-control-sm" value="${right}"></td>
                   `;
 
-          fastaTable.appendChild(row);
-        });
-      });
+                    fastaTable.appendChild(row);
+                });
+            });
+        }
     }
-  }
-  if (!isPremadeTable){
-    console.log("No .csv file detected.")
-  }
-});
+    if (!isPremadeTable) {
+        console.log("No .csv file detected.")
+    }
+}
 
 function splitLine(line) {
-  const match = line.match(/[,;]/); // finds first , or ;
+    const match = line.match(/[,;]/); // finds first , or ;
 
-  if (!match) {
-    return { left: line.trim(), right: "" };
-  }
+    if (!match) {
+        return {left: line.trim(), right: ""};
+    }
 
-  const sepIndex = match.index;
+    const sepIndex = match.index;
 
-  return {
-    left: line.slice(0, sepIndex).trim(),
-    right: line.slice(sepIndex + 1).trimStart()
-  };
+    return {
+        left: line.slice(0, sepIndex).trim(),
+        right: line.slice(sepIndex + 1).trimStart()
+    };
 }
+
+document.getElementById("form2").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+
+    // extracting options from index.html
+    document.querySelectorAll('input[name="options"]:checked')
+        .forEach(cb => formData.append("options", cb.value));
+
+    // extracting table_data
+    const tableData = getTableData();
+    formData.append("table_data", JSON.stringify(tableData));
+
+    // extracting all files
+    storedFiles.forEach(file => {
+        formData.append("files", file);
+    });
+
+    fetch("/upload", {
+        method: "POST",
+        body: formData
+    })
+        .then(r => r.json())
+        .then(data => console.log("FastAPI response:", data));
+});
