@@ -2,7 +2,7 @@
 <html lang="en">
 <style>
     * {
-      font-family: Arial;
+        font-family: Arial;
     }
 </style>
 <head>
@@ -14,70 +14,89 @@
 
 </head>
 <body>
-    <div class="shadow p-3 mb-2 bg-primary bg-gradient text-white"><h1>CircoStat - a compact statistical analysis visualizer </h1></div><br>
-    <div class="ml-1 fs-5 fw-semibold text-primary">Select circos tracks:</div>
-    <div class="ml-1 form-text">Nucleotide diversity available only after selecting Diversity (π) profiling .</div>
-    <form action="http://localhost:8000/upload" method="post" enctype="multipart/form-data" id="form2">
-        <div class="w-50 col-md-4">
-            <div class="card inset">
-                <div class="form-check">
-                    <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="SNP" id="SNP" >
-                    <label class="ml-1 fs-5 form-check-label" for="SNP">
+<div class="shadow p-3 mb-2 bg-primary bg-gradient text-white"><h1>CircoStat - a compact statistical analysis
+    visualizer </h1></div>
+<br>
+<div class="ml-1 fs-5 fw-semibold text-primary">Select circos tracks:</div>
+<div class="ml-1 form-text">Nucleotide diversity available only after selecting Diversity (π) profiling .</div>
+<form action="http://localhost:8000/upload" method="post" enctype="multipart/form-data" id="form2">
+    <div class="w-50 col-md-4">
+        <div class="card inset">
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="SNP" id="SNP">
+                <label class="ml-1 fs-5 form-check-label" for="SNP">
                     Single nucleotide polymorphism (SNP) profiling
-                </label></div><br>
-                <div class="form-check">
-                    <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="P_DIV" id="P_DIV" onclick="toggleSendButton()">
-                    <label class="ml-1 fs-5 form-check-label" for="P_DIV">
+                </label></div>
+            <br>
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="P_DIV" id="P_DIV"
+                       onclick="toggleSendButton()">
+                <label class="ml-1 fs-5 form-check-label" for="P_DIV">
                     Sliding Window Nucleotide Diversity (π) Profiling
-                </label></div><br>
-                <div class="form-check">
-                    <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="NUC_DIV" id="NUC_DIV" disabled>
-                    <label class="ml-1 fs-5 form-check-label" for="NUC_DIV">
+                </label></div>
+            <br>
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="NUC_DIV" id="NUC_DIV"
+                       disabled>
+                <label class="ml-1 fs-5 form-check-label" for="NUC_DIV">
                     Sliding Window Diagnostic Site Analysis (Nucleotide diversity)
                 </label></div>
-            </div>
         </div>
-        <div class="ml-1 fs-5 fw-semibold text-primary">Do you want to show gene annotations on circos?</div>
-        <div class="w-50 col-md-4">
-            <div class="card inset">
-                <div class="form-check">
-                    <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="annotate" id="annotate">
-                    <label class="ml-1 fs-5 form-check-label" for="annotate">
+    </div>
+    <div class="ml-1 fs-5 fw-semibold text-primary">Do you want to show gene annotations on circos?</div>
+    <div class="w-50 col-md-4">
+        <div class="card inset">
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="annotate" id="annotate">
+                <label class="ml-1 fs-5 form-check-label" for="annotate">
                     Check this box if you want CircoStat to automatically annotate your genes.
-                </label></div><br>
-            </div>
+                </label></div>
+            <br>
         </div>
-        <div class="ml-1 fs-5 fw-semibold text-primary">Is your .fasta file an alignment?</div>
-        <div class="w-50 col-md-4">
-            <div class="card inset">
-                <div class="form-check">
-                    <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="is_Alignment" id="is_Alignment">
-                    <label class="ml-1 fs-5 form-check-label" for="is_Alignment">
+    </div>
+    <div class="ml-1 fs-5 fw-semibold text-primary">Is your .fasta file an alignment?</div>
+    <div class="w-50 col-md-4">
+        <div class="card inset">
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="is_Alignment"
+                       id="is_Alignment">
+                <label class="ml-1 fs-5 form-check-label" for="is_Alignment">
                     Check this box if uploaded .fasta file is an alignment.
-                </label></div><br>
-            </div>
+                </label></div>
+            <br>
         </div>
-        <script type="text/javascript" src="/static/js/chart_details.js"></script><br>
-        <div class="ml-1 fs-5 fw-semibold text-primary">Submit all necessary files:</div>
-        <div class="ml-1 fs-7 fw-semibold">Case 1: By using your existing alignment</div>
-        <div class="ml-1 fs-8" id="basic-addon4"> Upload: <br> (1) your own pre-made alignment .fasta file (file name must include the word <strong>'alignment'</strong>) <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.</div><br>
-        <div class="ml-1 fs-7 fw-semibold">Case 2: By generating a new alignment via CircoStat</div>
-        <div class="ml-1 fs-8" id="basic-addon4"> Alignment is created based on genes provided by the user. Upload: <br> (1) '.fasta' gene files <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.</div><br>
-        <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required>
-        <input type="submit" value="Submit" class="ml-1 btn btn-primary"><br>
-        <ul id="fileList" class="list-group w-50"></ul><br>
-        <div class="table-responsive">
-                <table class="table align-middle" style="table-layout: auto; width: auto;">
-                    <thead>
-                    <tr>
-                        <th>Fasta name</th>
-                        <th>Group</th>
-                    </tr>
-                    </thead>
-                    <tbody id="fastaTable"></tbody>
-                </table>
-        </div>
-    </form>
+    </div>
+    <script type="text/javascript" src="/static/js/chart_details.js"></script>
+    <br>
+    <div class="ml-1 fs-5 fw-semibold text-primary">Submit all necessary files:</div>
+    <div class="ml-1 fs-7 fw-semibold">Case 1: By using your existing alignment</div>
+    <div class="ml-1 fs-8" id="basic-addon4"> Upload: <br> (1) your own pre-made alignment .fasta file (file name must
+        include the word <strong>'alignment'</strong>) <br>(2) pre-made data table in ".csv" format (first column being
+        a fasta file name, second being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.
+    </div>
+    <br>
+    <div class="ml-1 fs-7 fw-semibold">Case 2: By generating a new alignment via CircoStat</div>
+    <div class="ml-1 fs-8" id="basic-addon4"> Alignment is created based on genes provided by the user. Upload: <br> (1)
+        '.fasta' gene files <br>(2) pre-made data table in ".csv" format (first column being a fasta file name, second
+        being a group name, ex. 'A', 'B', 'C' etc.). You can edit groups via webpage.
+    </div>
+    <br>
+    <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required>
+    <input type="submit" value="Submit" class="ml-1 btn btn-primary"><br>
+    <ul id="fileList" class="list-group w-50"></ul>
+    <br>
+    <div class="table-responsive">
+        <table class="table align-middle" style="table-layout: auto; width: auto;">
+            <thead>
+            <tr>
+                <th>Fasta name</th>
+                <th>Group</th>
+            </tr>
+            </thead>
+            <tbody id="fastaTable"></tbody>
+        </table>
+    </div>
+</form>
 <link rel="stylesheet" href="/static/js/bootstrap.min.js">
 <script src="/static/js/fasta_tables.js" defer></script>
 <script src="/static/js/datatable_passer.js" defer></script>
