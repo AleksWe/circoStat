@@ -47,14 +47,33 @@
     <div class="w-50 col-md-4">
         <div class="card inset">
             <div class="form-check">
-                <input class="ml-1 fs-5 form-check-input" type="checkbox" name="options" value="annotate" id="annotate">
-                <label class="ml-1 fs-5 form-check-label" for="annotate">
-                    Check this box if you want CircoStat to automatically annotate your genes.
+                <input class="ml-1 fs-5 form-check-input" type="radio" name="options" value="generate_annot" id="generate_annot">
+                <label class="ml-1 fs-5 form-check-label" for="generate_annot">
+                    Yes, let CircoStat automatically annotate your genes
+                    <span class="d-block text-secondary" style="font-size: 0.8em; line-height: 1; margin-top: -2px;">
+                        Preferred option when you're generating an alignment with CircoStat
+                    </span>
+                </label>
+            </div>
+            <br>
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="radio" name="options" value="premade_annot" id="premade_annot">
+                <label class="ml-1 fs-5 form-check-label" for="premade_annot">
+                    Yes, I have my own file with gene annotation.
+                    <span class="d-block text-secondary" style="font-size: 0.8em; line-height: 1; margin-top: -2px;">
+                        Please, provide .gff3 file in the upload box below
+                    </span>
+                </label></div>
+            <br>
+            <div class="form-check">
+                <input class="ml-1 fs-5 form-check-input" type="radio" name="options" value="no_annot" id="no_annot">
+                <label class="ml-1 fs-5 form-check-label" for="no_annot">
+                    No
                 </label></div>
             <br>
         </div>
     </div>
-    <div class="ml-1 fs-5 fw-semibold text-primary">Is your .fasta file an alignment?</div>
+    <div class="ml-1 fs-5 fw-semibold text-primary">Is your provided .fasta file an alignment?</div>
     <div class="w-50 col-md-4">
         <div class="card inset">
             <div class="form-check">

@@ -187,10 +187,10 @@ def statistical_tracks_generator(selected_options, request):
         sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
         preparing_circos_data = r['prepare_circos_data']
         preparing_circos_data(sample_table, selected_options, Config.ALIGNMENT_FILE)
-        txt_files = glob.glob(os.path.join(Config.PY_SCRIPTS_PATH, "*.txt"))
+        txt_files = glob.glob("*.txt")
         for f in txt_files:
             try:
-                shutil.move(f, Config.RESULT_PATH)
+                shutil.move(f, f'{Config.RESULT_PATH}{f}')
             except Exception as e:
                 logger.error(f"Failed to move {f}: {e}")
                 return error_message(request)
@@ -201,56 +201,86 @@ def statistical_tracks_generator(selected_options, request):
         return error_message(request)
     return None
 
-def gene_annotator(request):
+def gene_annotator(option, request):
     """
     Generates gene annotation for gene name track on circos using Chloe.jl.
+    :param option: Option from selected options from HTML form.
     :param request: Incoming FastAPI request.
     :return: TemplateResponse or None
         Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        if not os.path.exists(f'{Config.CHLOE_PATH}'):
-            os.makedirs(f'{Config.CHLOE_PATH}')
-        consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
-        with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
-            f.write('>consensus.fasta\n')
-            f.write(consensus)
-        subprocess.run(['bash', './chloe_runner.sh', Config.RESULT_PATH], check=True)
+        annotate_path = ''
+        if option == 'generate_annot':
+            annotate_path = Config.CHLOE_PATH
+            logger.info("Running Chloe gene annotator for circos visualisation...")
+            if not os.path.exists(f'{Config.CHLOE_PATH}'):
+                os.makedirs(f'{Config.CHLOE_PATH}')
+            consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
+            with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
+                f.write('>consensus.fasta\n')
+                f.write(consensus)
+        elif option == 'premade_annot':
+            logger.info("Setting up provided annotation file for circos visualisation...")
+            annotate_path = Config.TMP_PATH
+        subprocess.run(['bash', '../chloe_runner.sh', Config.RESULT_PATH, option, annotate_path], check=True)
         fc.create_gene_name(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
     return None
 
+
+def config_writer(request, metadata_conf_file,selected_options):
+    """
+    Saves a configuration file based on current metadata variable.
+    :param request: Incoming FastAPI request.
+    :param metadata_conf_file: Current config file for parameter/file selection.
+    :param selected_options: Options from HTML form.
+    :return: TemplateResponse or None
+    Rendered HTML error/feedback page when validation fails; otherwise None.
+    """
+    try:
+        for visual_track in ['karyotype', 'highlights']:
+            metadata_conf_file.set(Config.SECTION_FOR_META, visual_track, f"{visual_track}.txt")
+
+        for option in selected_options:
+            if option == 'SNP' and any(Path(Config.RESULT_PATH).glob(f"*snp*")):
+                metadata_conf_file.set(Config.SECTION_FOR_META, f'SNP', 'snp_track.txt')
+            elif option == 'P_DIV':
+                for file in Path(Config.RESULT_PATH).glob(f"*pop_track_*"):
+                    metadata_conf_file.set(Config.SECTION_FOR_META, f"P_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}", f"{file}")
+            elif option == 'NUC_DIV':
+                for file in Path(Config.RESULT_PATH).glob(f"*spider_track_*"):
+                    metadata_conf_file.set(Config.SECTION_FOR_META, f"NUC_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}", f"{file}")
+        with open(Config.META_DATA, 'w') as configfile:
+            metadata_conf_file.write(configfile)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return error_message(request)
+    return None
+
+
 def circos_creator(request, name="circos.conf"):
     """
     Reads from metadata.ini file, creates and circos.conf file.
+
     """
     try:
         metadata_file = cm.meta_data(Config.META_DATA)
-        new_config = cm.plot_generator(metadata_file)
+        new_config = cm.plot_generator(metadata_file, section=Config.SECTION_FOR_META)
         cm.config_writer(new_config, name)
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
     return None
 
-def config_writer(request, meta_data, metadata):
-    """
-    Saves a configuration file based on current metadata variable.
-    """
-    try:
-        with open(meta_data, 'w') as configfile:
-            metadata.write(configfile)
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        return error_message(request)
-    return None
 
 def feedback_message(request, context):
     """
     Returns feedback with current app state using the 'feedback.html' template.
     :param request: The incoming FastAPI request.
+    :param context: Message specified for the user.
     :return: TemplateResponse
         Rendered HTML error page.
     """
@@ -297,7 +327,8 @@ async def upload(request: Request,
             return response
 
         logger.info("Creating metadata.ini for circos tracks...")
-        metadata = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
+        metadata_conf_file = config_creator(f"{Config.RESULT_PATH}{Config.META_DATA}")
+        metadata_conf_file.add_section(Config.SECTION_FOR_META)
 
         logger.info("Checking for .csv file and saving all provided files to temporary directories...")
         response = file_saver(files, request)
@@ -320,34 +351,17 @@ async def upload(request: Request,
         logger.info("Processing all data for statistical analysis with circos track generation...")
         statistical_tracks_generator(selected_options, request)
 
-        # TODO: Enable sending gff/bam(?) file by user
-        if "annotate" in selected_options:
-            logger.info("Running Chloe gene annotator for circos visualisation...")
-            response = gene_annotator(request)
+        annotation = next(option for option in selected_options if "_annot" in option)
+        if annotation == 'no_annot':
+            logger.info("No annotation provided. Circos visualisation without annotation.")
+        else:
+            metadata_conf_file.set(Config.SECTION_FOR_META, "gene_name", "gene_name.txt")
+            response = gene_annotator(annotation, request)
             if response is not None:
                 return response
 
-        # TODO: though these files are not created based off options chosen by the user,
-        #       in the current version it's possible that gene_name file won't exist if user chooses "no annotation" option
-        #       -> in the future enabling sending gff/bam file by user and requirement that annotation NEEDS to be a track
-        #          will resolve this
         logger.info("Overwriting metadata for circos generation...")
-        section = 'FilesConfig'
-        metadata.add_section(section)
-        for visual_track in ['karyotype', 'highlights', 'gene_name']:
-            metadata.set(section, visual_track, f"{visual_track}.txt")
-
-        for option in selected_options:
-            if option == 'SNP' and any(Path(Config.RESULT_PATH).glob(f"*snp*")):
-                metadata.set(section, f'SNP', 'snp_track.txt')
-            elif option == 'P_DIV':
-                for file in Path(Config.RESULT_PATH).glob(f"*pop_track_*"):
-                    metadata.set(section, f"P_DIV_{file.name.split("_", 2)[2].rsplit(".txt", 1)[0]}", f"{file}")
-            elif option == 'NUC_DIV':
-                for file in Path(Config.RESULT_PATH).glob(f"*spider_track_*"):
-                    metadata.set(section, f"NUC_DIV_{file.name.split("_", 2)[2].rsplit(".txt", 1)[0]}", f"{file}")
-
-        response = config_writer(request, Config.META_DATA, metadata)
+        response = config_writer(request, metadata_conf_file, selected_options)
         if response is not None:
             return response
 
@@ -366,6 +380,7 @@ async def upload(request: Request,
             if os.path.exists(path):
                 shutil.rmtree(path, ignore_errors=True)
         logger.info("All temporary files deleted.")
+        logger.info("-------- Run completed. Click 'Submit' button to run the application once again. --------")
 
 
 # Only for testing purposes

@@ -5,7 +5,8 @@ LOGGING = {
     "version": 1,
     "formatters": {
         "standard": {
-            "format": "%(levelname)s:    %(message)s"
+            "format": "%(asctime)s %(levelname)s:    %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
         }
     },
     "handlers": {

@@ -73,8 +73,8 @@ RUN bash Miniforge3.sh -b -p /opt/conda && \
 ENV PATH="/opt/conda/bin:${PATH}"
 
 # Create and activate a mamba environment
-#RUN mamba create -n circos #-f package-list.txt 
-RUN mamba create -n circos
+#RUN mamba create -n circos #-f package-list.txt
+RUN mamba create -n circos python=3.13
 RUN echo "mamba activate circos" >> /root/.bashrc
 
 # Install all required packages and dependencies
