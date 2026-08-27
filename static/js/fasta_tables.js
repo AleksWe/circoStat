@@ -106,6 +106,10 @@ document.getElementById("form2").addEventListener("submit", (e) => {
         method: "POST",
         body: formData
     })
-        .then(r => r.json())
-        .then(data => console.log("FastAPI response:", data));
+        .then(r => r.text())
+        .then(html => {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        document.documentElement.replaceWith(doc.documentElement);
+    });
 });
+

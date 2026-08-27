@@ -290,6 +290,7 @@ def feedback_message(request, context):
         context=context
     )
 
+
 def error_message(request):
     """
     Returns an error page response using the 'feedback.html' template.
@@ -373,14 +374,16 @@ async def upload(request: Request,
         return feedback_message(
             request,
             {"title": "CircoStat pipeline completed successfully",
-             "detail": f"Processing completed successfully. Results have been saved to:"})
+             "detail": "-------- Process completed succesfully. Please return to previous window by clicking 'Go Back'. \n"
+                    "To rerun process select form options, upload files and click 'Submit' button. --------"})
 
     finally:
         for path in Config.ALL_TEMPORARY:
             if os.path.exists(path):
                 shutil.rmtree(path, ignore_errors=True)
         logger.info("All temporary files deleted.")
-        logger.info("-------- Run completed. Click 'Submit' button to run the application once again. --------")
+        logger.info("-------- Run completed. Please return to previous window by clicking 'Go Back'. \n"
+                    "To rerun process select form options, upload files and click 'Submit' button. --------")
 
 
 # Only for testing purposes
