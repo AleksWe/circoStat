@@ -19,14 +19,10 @@ class CircosConfBuild:
 
     @staticmethod
     def coordinates_setter(r0):
-        return r0 - 0.100, r0
+        return round(r0 - 0.100, 3), round(r0, 3)
 
     def add(self, text):
         self.lines.append(text)
-
-    def add_if(self, section, key, text):
-        if self.metadata.get(section, key, fallback=None):
-            self.lines.append(text)
 
     def build(self):
         return "\n".join(self.lines)

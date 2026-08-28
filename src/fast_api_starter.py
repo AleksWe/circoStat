@@ -279,6 +279,8 @@ def circos_creator(request, name="circos.conf"):
         metadata_file = cm.meta_data(f'{Config.TMP_PATH}{Config.META_DATA}')
         new_config = cm.plot_generator(metadata_file, section=Config.SECTION_FOR_META)
         cm.circos_conf_writer(new_config, name)
+        if os.path.exists(f"../{name}"):
+            os.remove(f"../{name}")
         shutil.move(name, "../")
     except Exception as e:
         logger.error(f"Error: {e}")
