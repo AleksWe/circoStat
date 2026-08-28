@@ -101,7 +101,14 @@
     </div>
     <br>
     <input class="w-25 ml-1 d-inline form-control" type="file" id="fileInput" name="files" multiple required>
-    <input type="submit" value="Submit" class="ml-1 btn btn-primary"><br>
+    <input type="submit" value="Submit" class="ml-1 btn btn-primary" id="submitBtn">
+    <span id="loading" class="d-none ms-2">
+        <span class="spinner-border spinner-border-sm"
+          role="status"
+          aria-hidden="true"></span>
+        <span>Please wait...</span>
+    </span>
+    <br>
     <ul id="fileList" class="list-group w-50"></ul>
     <br>
     <div class="table-responsive">
