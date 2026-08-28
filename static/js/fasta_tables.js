@@ -102,6 +102,10 @@ document.getElementById("form2").addEventListener("submit", (e) => {
         formData.append("files", file);
     });
 
+    if (window.allUnchecked || !window.anyRadioSelected) {
+        return;
+    }
+
     fetch("/upload", {
         method: "POST",
         body: formData
