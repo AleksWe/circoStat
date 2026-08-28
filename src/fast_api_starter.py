@@ -66,8 +66,9 @@ def tmp_creator(request):
 def config_creator(path_to_metadata):
     """
     Creates or loads a configuration file at the given path.
-    If the file does not exist, an empty file is created. The function then
-    returns a RawConfigParser instance with the file's contents loaded.
+    If the file does not exist, an empty file is created.
+    :return: config_parser:
+        a RawConfigParser instance with the file's contents loaded.
     """
     if os.path.exists(path_to_metadata):
         with open(path_to_metadata, 'w') as file:
@@ -113,6 +114,7 @@ def csv_table_creator(table_data):
     """
     Creates .csv file from user web page table.
     :param table_data: Uploaded data table from the web API.
+    :return: Set of unique groups.
     """
     data = json.loads(table_data)
     with open(f'{Config.TMP_PATH}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
@@ -122,6 +124,8 @@ def csv_table_creator(table_data):
             [row[0], f"{Config.TMP_PATH}{row[0]}", row[1]]
             for row in data
         ])
+    unique_groups = {str(item[1]).lower() for item in data}
+    return unique_groups
 
 def alignment_checker(files, request):
     """
@@ -241,20 +245,22 @@ def config_writer(request, metadata_conf_file,selected_options):
     Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        for visual_track in ['karyotype', 'highlights']:
-            metadata_conf_file.set(Config.SECTION_FOR_META, visual_track, f"{visual_track}.txt")
-
         for option in selected_options:
             if option == 'SNP' and any(Path(Config.RESULT_PATH).glob(f"*snp*")):
                 metadata_conf_file.set(Config.SECTION_FOR_META, f'SNP', 'snp_track.txt')
             elif option == 'P_DIV':
                 for file in Path(Config.RESULT_PATH).glob(f"*pop_track_*"):
-                    metadata_conf_file.set(Config.SECTION_FOR_META, f"P_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}", f"{file}")
+                    metadata_conf_file.set(Config.SECTION_FOR_META,
+                                           f"P_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}",
+                                           f"{file}")
             elif option == 'NUC_DIV':
                 for file in Path(Config.RESULT_PATH).glob(f"*spider_track_*"):
-                    metadata_conf_file.set(Config.SECTION_FOR_META, f"NUC_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}", f"{file}")
+                    metadata_conf_file.set(Config.SECTION_FOR_META,
+                                           f"NUC_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}",
+                                           f"{file}")
         with open(Config.META_DATA, 'w') as configfile:
             metadata_conf_file.write(configfile)
+        shutil.move(Config.META_DATA, f'{Config.TMP_PATH}{Config.META_DATA}')
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -264,12 +270,16 @@ def config_writer(request, metadata_conf_file,selected_options):
 def circos_creator(request, name="circos.conf"):
     """
     Reads from metadata.ini file, creates and circos.conf file.
-
+    :param request: Incoming FastAPI request.
+    :param name: Name of new circos config file.
+    :return: TemplateResponse or None
+    Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        metadata_file = cm.meta_data(Config.META_DATA)
+        metadata_file = cm.meta_data(f'{Config.TMP_PATH}{Config.META_DATA}')
         new_config = cm.plot_generator(metadata_file, section=Config.SECTION_FOR_META)
-        cm.config_writer(new_config, name)
+        cm.circos_conf_writer(new_config, name)
+        shutil.move(name, "../")
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -337,7 +347,8 @@ async def upload(request: Request,
             return response
 
         logger.info("Creating files based on data provided from user...")
-        csv_table_creator(table_data)
+        unique_groups = csv_table_creator(table_data)
+        metadata_conf_file.set(Config.SECTION_FOR_META,'groups', ", ".join(unique_groups))
 
         if 'is_Alignment' in selected_options:
             logger.info("Creating alignment from provided .fasta gene files...")

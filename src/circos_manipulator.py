@@ -1,9 +1,11 @@
 import logging
 import pandas as pd
-import plotting as p
 import configparser
 
-# Path
+import src.plotting as p
+from src.config import Config
+
+
 def meta_data(path):
     """
     Read from metadata.ini file
@@ -15,99 +17,47 @@ def meta_data(path):
     return config_parser
 
 
-def plot_finder(circos_conf):
-    new_string = circos_conf[circos_conf.find('<plot>'):circos_conf.find('<plot>')].strip()
-    return new_string
-
-
-def all_min_max_returner(file):
-    # TODO: function as a class function
-    df = pd.read_csv(file, sep='\s+', header=None)
-    min_value, max_value = df[3].min(), df[3].max()
-    # TODO: round value to the smallest possible value (f.ex. when min=1, round to 0; when max=426, round to 430
-    return min_value, max_value
-
-
-def option_checker_w_plotting(config, section, option,new_circos_conf,r0,r1, color, starting_point, type):
-    file_name = config.get(section, option)
-    min_value, max_value = all_min_max_returner(file_name)
-    plotter = p.Plotter(file=file_name)
-    if type == 'line':
-        new_circos_conf += plotter.line_plotting(r0=r0, r1=r1, min_val=min_value, max_val=max_value, color=color)
-    elif type == 'scatter':
-        new_circos_conf += plotter.scatter_plotting(r0=r0, r1=r1, min_val=min_value, max_val=max_value, color=color)
-    else:
-        new_circos_conf += plotter.bar_plotting(r0=r0, r1=r1, min_val=min_value, max_val=max_value, color=color)
-    starting_point -= 0.110
-    r0, r1 = f'{round(starting_point, 3)}r', f'{round(starting_point + 0.10, 3)}r'
-    return new_circos_conf, r0, r1, starting_point
-
-
-def plot_generator(config):
-    try:
-        new_circos_conf = ''
-        karyotype = config.get('MetaData', 'karyotype')
-        new_circos_conf += p.Plotter.karyotype_adder(karyotype)
-        new_circos_conf += p.Plotter.ideogram_adder()
-        new_circos_conf += p.Plotter.plot_starter()
-        starting_point = 0.895
-        r0, r1 = f'{starting_point}r', f'{starting_point + 0.100}r'
-        # For much needed improvement!!! ε=ε=ε=┏(゜ロ゜;)┛
-        # TODO: add checker for file - there must be 3 plots for snp, 3 for ind, 1 for p_div
-        if config.has_option('MetaData', 'highlights'):
-            file_name = config.get('MetaData', 'highlights')
-            plotter_one = p.Plotter(file=file_name)
-            new_circos_conf += plotter_one.highlighter()
-        if config.has_option('MetaData', 'gene_name'):
-            file_name = config.get('MetaData', 'gene_name')
-            plotter_one = p.Plotter(file=file_name)
-            new_circos_conf += plotter_one.name_plotter()
-        if config.has_option('OverallPlotInfo', 'file_snp'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config,'OverallPlotInfo','file_snp',new_circos_conf,r0,r1,'red',starting_point, type='line')
-        if config.has_option('OverallPlotInfo', 'file_snp_mt'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config,'OverallPlotInfo','file_snp_mt',new_circos_conf,r0,r1,'red',starting_point, type='scatter')
-        if config.has_option('OverallPlotInfo', 'file_snp_perc'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config, 'OverallPlotInfo', 'file_snp_perc', new_circos_conf, r0, r1, 'red',
-                                      starting_point, type='bar')
-        if config.has_option('OverallPlotInfo', 'file_ind'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config, 'OverallPlotInfo', 'file_ind', new_circos_conf, r0, r1, 'blue',
-                                      starting_point, type='line')
-        if config.has_option('OverallPlotInfo', 'file_ind_mt'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config, 'OverallPlotInfo', 'file_ind_mt', new_circos_conf, r0, r1, 'blue',
-                                      starting_point, type='scatter')
-        if config.has_option('OverallPlotInfo', 'file_ind_perc'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config, 'OverallPlotInfo', 'file_ind_perc', new_circos_conf, r0, r1, 'blue',
-                                      starting_point, type='bar')
-        if config.has_option('OverallPlotInfo', 'file_p_div'):
-            new_circos_conf, r0, r1, starting_point = option_checker_w_plotting(config, 'OverallPlotInfo', 'file_p_div', new_circos_conf, r0, r1, 'green',
-                                      starting_point, type='line')
-        new_circos_conf += p.Plotter.plot_ender()
-        new_circos_conf += p.Plotter.image_adder()
-        return new_circos_conf
-    except configparser.NoSectionError as e:
-        logging.error(f"   INFO: {e} - Not a valid value. Validate meta_data.ini data.")
-
-
-def position_modifier(circos_conf):
-    logging.info("   INFO: starting position modifications \n")
-    new_string = plot_finder(circos_conf)
-    return circos_conf 
-
-
-def config_writer(new_config, name = '../circos.conf'):
+def circos_conf_writer(new_config, name):
     """
     Write a newly generated circos.conf to file
-    :param new_config: contains data from 
-    :param name:
+    :param new_config: modified circos.conf data
+    :param name: name of new file (circos.conf preferably)
     """
     with open(name, "w", newline="") as file:
         file.write(new_config)
 
 
+def plot_generator(config_parser, section, starting_point = 0.895):
+    new_circos = p.CircosConfBuild(config_parser)
+    with open(Config.CIRCOS_CONF_TEMPLATE,'r') as file:
+        template_circos_conf = file.read()
+    new_circos.add(template_circos_conf)
+    new_circos.add(new_circos.plots_starter())
+    groups = {item.strip() for item in config_parser.get(section,"groups").split(",")}
+    r0, r1 = starting_point, starting_point + 0.100
+    if config_parser.has_option(section,'snp'):
+        snp_plot = p.Plotter(chart_type='scatter',
+                             file_name=config_parser.get(section,'snp'),
+                             r0=f"{r0}r", r1=f"{r1}r", color="vvdred", glyph="circle", glyph_size="8p")
+        new_circos.add(snp_plot.create_plot())
+        r0, r1 = new_circos.coordinates_setter(r0)
+    for prefix in ('p_div_', 'nuc_div_'):
+        for name in groups:
+            if config_parser.has_option(section, f'{prefix}{name}'):
+                p_div_plot = p.Plotter(chart_type='line',
+                                     file_name=config_parser.get(section,f'{prefix}{name}'),
+                                     r0=f"{r0}r", r1=f"{r1}r", color="vvdred")
+                new_circos.add(p_div_plot.create_plot())
+                r0, r1 = new_circos.coordinates_setter(r0)
+    new_circos.add(new_circos.plots_ender())
+    circos_conf = new_circos.build()
+    return circos_conf
+
+
 def main():
     # Creating config variable that holds all names from META_DATA
-    config = meta_data()
-    config_writer(plot_generator(config), '../circos.conf')
+    config = meta_data(Config.META_DATA)
+    circos_conf_writer(plot_generator(config, Config.SECTION_FOR_META), '../circos.conf')
 
 
 if __name__ == '__main__':

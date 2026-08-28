@@ -1,0 +1,28 @@
+karyotype = karyotype.txt
+
+<ideogram>
+    <spacing>
+        default = 0.005r
+    </spacing>
+
+    radius = 0.90r
+    thickness = 20p
+    fill = yes
+    stroke_color = black
+    stroke_thickness = 1p
+</ideogram>
+
+<highlights>
+    <highlight>
+        file = highlights.txt
+        r0 = 0.90r
+        r1 = 0.95r
+    </highlight>
+</highlights>
+
+<image>
+    <<include etc/image.conf>>
+</image>
+
+<<include etc/colors_fonts_patterns.conf>>
+<<include etc/housekeeping.conf>>
