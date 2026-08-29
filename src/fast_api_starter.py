@@ -220,6 +220,7 @@ def gene_annotator(option, request):
             logger.info("Running Chloe gene annotator for circos visualisation...")
             if not os.path.exists(f'{Config.CHLOE_PATH}'):
                 os.makedirs(f'{Config.CHLOE_PATH}')
+            logger.info("Creating consensus sequence for gene annotation...")
             consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
             with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
                 f.write('>consensus.fasta\n')
@@ -228,7 +229,9 @@ def gene_annotator(option, request):
             logger.info("Setting up provided annotation file for circos visualisation...")
             annotate_path = Config.TMP_PATH
         subprocess.run(['bash', '../chloe_runner.sh', Config.RESULT_PATH, option, annotate_path], check=True)
-        fc.create_gene_name(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
+        generate_txt_files = [fc.create_gene_name,fc.create_karyotype,fc.create_highlight]
+        for func in generate_txt_files:
+            func(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -278,10 +281,12 @@ def circos_creator(request, name="circos.conf"):
     try:
         metadata_file = cm.meta_data(f'{Config.TMP_PATH}{Config.META_DATA}')
         new_config = cm.plot_generator(metadata_file, section=Config.SECTION_FOR_META)
-        cm.circos_conf_writer(new_config, name)
-        if os.path.exists(f"../{name}"):
-            os.remove(f"../{name}")
-        shutil.move(name, "../")
+        cm.circos_conf_writer(new_config, f"{Config.TMP_PATH}{name}")
+        new_file_path = f"{BASE_DIR}/{name}"
+        if os.path.exists(new_file_path):
+            os.remove(new_file_path)
+        shutil.move(f"{Config.TMP_PATH}{name}", new_file_path)
+        subprocess.run(["bash", "-c", "cd .. && circos --conf circos.conf"], check=True)
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -366,13 +371,9 @@ async def upload(request: Request,
         statistical_tracks_generator(selected_options, request)
 
         annotation = next(option for option in selected_options if "_annot" in option)
-        if annotation == 'no_annot':
-            logger.info("No annotation provided. Circos visualisation without annotation.")
-        else:
-            metadata_conf_file.set(Config.SECTION_FOR_META, "gene_name", "gene_name.txt")
-            response = gene_annotator(annotation, request)
-            if response is not None:
-                return response
+        response = gene_annotator(annotation, request)
+        if response is not None:
+            return response
 
         logger.info("Overwriting metadata for circos generation...")
         response = config_writer(request, metadata_conf_file, selected_options)

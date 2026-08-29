@@ -1,22 +1,42 @@
-karyotype = karyotype.txt
+karyotype = results/karyotype.txt
 
 <ideogram>
     <spacing>
         default = 0.005r
+        <pairwise anurchr>
+            spacing = 5r
+        </pairwise>
     </spacing>
 
+    # Ideogram position, fill and outline
     radius = 0.90r
     thickness = 20p
     fill = yes
+    fill_color = black
     stroke_color = black
-    stroke_thickness = 1p
+    stroke_thickness = 2p
+
+    # Minimum definition for ideogram labels.
+    show_label = no
+    label_font = default
+    label_radius = dims(ideogram,radius_inner) -50p
+    label_size = 45
+    label_parallel = yes
 </ideogram>
 
 <highlights>
+    z = 10
+    fill_color = lgrey
+        <highlight>
+            file = results/highlights.txt
+            r0 = 1.0r
+        r1 = 1.5r
+        </highlight>
+
     <highlight>
-        file = highlights.txt
-        r0 = 0.90r
-        r1 = 0.95r
+        file = results/highlights.txt
+        r0 = 0.2r
+        r1 = 1.0r
     </highlight>
 </highlights>
 

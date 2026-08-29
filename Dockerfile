@@ -87,7 +87,6 @@ EXPOSE 8000
 
 # Chmod files
 RUN chmod +x chloe_runner.sh
-RUN chmod +x circos_project.sh
 
 # Command to run your application
 CMD ["bash", "-c", "source activate circos && uvicorn src.fast_api_starter:app --host 0.0.0.0 --port 8000 --no-access-log"]

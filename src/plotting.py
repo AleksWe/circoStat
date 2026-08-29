@@ -45,10 +45,38 @@ class Plotter:
         self.color = color
         self.options = kwargs
 
+    @staticmethod
+    def gene_name_plot():
+        plot = f"""
+        <plot>
+        type       = text
+        color      = black
+        label_font = default
+        label_size = 42p
+        
+        file  = results/gene_name.txt
+        
+        r0 = 1r
+        r1 = 1.3r
+        padding = 2p
+        rpadding = 2p
+        
+        show_links     = yes
+        link_dims	= 6p
+        link_thickness = 2p
+        link_color     = red
+        label_snuggle  = yes
+        max_snuggle_distance = 2r
+        snuggle_tolerance = 0.5
+        snuggle_sampling = 2
+        </plot>
+            """
+        return plot
+
     def create_plot(self):
         plot = ["<plot>",
                 f"    type = {self.type}",
-                f"    file = {self.file_name}",
+                f"    file = results/{self.file_name}",
                 f"    r0 = {self.r0}",
                 f"    r1 = {self.r1}",
                 f"    color = {self.color}"
