@@ -238,29 +238,24 @@ def gene_annotator(option, request):
     return None
 
 
-def config_writer(request, metadata_conf_file,selected_options):
+def config_writer(request, metadata_conf_file):
     """
     Saves a configuration file based on current metadata variable.
     :param request: Incoming FastAPI request.
     :param metadata_conf_file: Current config file for parameter/file selection.
-    :param selected_options: Options from HTML form.
     :return: TemplateResponse or None
     Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        for option in selected_options:
-            if option == 'SNP' and any(Path(Config.RESULT_PATH).glob(f"*snp*")):
-                metadata_conf_file.set(Config.SECTION_FOR_META, f'SNP', 'snp_track.txt')
-            elif option == 'P_DIV':
-                for file in Path(Config.RESULT_PATH).glob(f"*pop_track_*"):
+        for file in Path(Config.RESULT_PATH).iterdir():
+            key = next((key for key in Config.OPTION_MAP if Config.OPTION_MAP[key] in file.name), None)
+            if key is not None:
+                if file.name.count("_") >= 2:
                     metadata_conf_file.set(Config.SECTION_FOR_META,
-                                           f"P_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}",
+                                           f"{key}_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}",
                                            f"{file}")
-            elif option == 'NUC_DIV':
-                for file in Path(Config.RESULT_PATH).glob(f"*spider_track_*"):
-                    metadata_conf_file.set(Config.SECTION_FOR_META,
-                                           f"NUC_DIV_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}",
-                                           f"{file}")
+                else:
+                    metadata_conf_file.set(Config.SECTION_FOR_META, key, f"{file}")
         with open(Config.META_DATA, 'w') as configfile:
             metadata_conf_file.write(configfile)
         shutil.move(Config.META_DATA, f'{Config.TMP_PATH}{Config.META_DATA}')
@@ -376,7 +371,7 @@ async def upload(request: Request,
             return response
 
         logger.info("Overwriting metadata for circos generation...")
-        response = config_writer(request, metadata_conf_file, selected_options)
+        response = config_writer(request, metadata_conf_file)
         if response is not None:
             return response
 

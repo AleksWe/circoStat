@@ -14,4 +14,7 @@ class Config:
         'pdiv': '../R/calculate_pop_stats.R',
         'nuc_div': '../R/run_spider.R'
     }
+    OPTION_MAP = {'SNP':'snp_track.txt',
+                  'P_DIV':'pop_track_',
+                  'NUC_DIV':'spider_track_'}
     ALL_TEMPORARY = [TMP_PATH, RESULT_PATH]
