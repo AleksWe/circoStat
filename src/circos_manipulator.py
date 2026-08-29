@@ -26,6 +26,13 @@ def circos_conf_writer(new_config, path):
 
 
 def plot_generator(config_parser, section, starting_point = 0.895):
+    """
+
+    :param config_parser: data from metadata config file
+    :param section: section from metadata config file
+    :param starting_point: starting element for tracks
+    :return: new and modified config file
+    """
     new_circos = p.CircosConfBuild(config_parser)
     with open(Config.CIRCOS_CONF_TEMPLATE,'r') as file:
         template_circos_conf = file.read()
