@@ -47,7 +47,7 @@ def create_karyotype(annotation_file, path):
     Generate a Circos-compatible karyotype.txt file based on genome length.
     """
     selected = annotation_file.df
-    data = f'chr - {selected.seq_id[0]} 1 {selected.start.min()} {selected.end.max()} grey'
+    data = f'chr - chr 1 {selected.start.min()} {selected.end.max()} grey'
     with open(f'{path}karyotype.txt', "w") as text_file:
         text_file.write(data)
     return
