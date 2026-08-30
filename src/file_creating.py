@@ -1,6 +1,7 @@
 import os
 import gffpandas.gffpandas as gffpd
 from pathlib import Path
+from Bio import AlignIO
 
 def file_finder(path):
     """
@@ -56,12 +57,8 @@ def find_alignment_length(alignment_file):
     """
     Find the length of the provided alignment file.
     """
-    length = 1
-    with open(alignment_file) as f:
-        for line in f:
-            if not line.startswith(">"):
-                length += len(line.strip())
-    return length
+    alignment = AlignIO.read(alignment_file, "fasta")
+    return alignment.get_alignment_length()
 
 def create_karyotype_by_align(alignment_file, path):
     """
