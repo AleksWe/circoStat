@@ -42,12 +42,33 @@ def create_highlight(annotation_file, path):
     df_highlight.to_csv(f'{path}highlights.txt', index=False, sep=' ', header=None)
     return
 
-def create_karyotype(annotation_file, path):
+def create_karyotype_by_annot(annotation_file, path):
     """
     Generate a Circos-compatible karyotype.txt file based on genome length.
     """
     selected = annotation_file.df
     data = f'chr - chr 1 {selected.start.min()} {selected.end.max()} grey'
+    with open(f'{path}karyotype.txt', "w") as text_file:
+        text_file.write(data)
+    return
+
+def find_alignment_length(alignment_file):
+    """
+    Find the length of the provided alignment file.
+    """
+    length = 1
+    with open(alignment_file) as f:
+        for line in f:
+            if not line.startswith(">"):
+                length += len(line.strip())
+    return length
+
+def create_karyotype_by_align(alignment_file, path):
+    """
+    Generate a Circos-compatible karyotype.txt file based on genome length.
+    """
+    alignment_length = find_alignment_length(alignment_file)
+    data = f'chr - chr 1 1 {alignment_length} grey'
     with open(f'{path}karyotype.txt', "w") as text_file:
         text_file.write(data)
     return

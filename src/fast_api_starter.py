@@ -215,23 +215,28 @@ def gene_annotator(option, request):
     """
     try:
         annotate_path = ''
-        if option == 'generate_annot':
-            annotate_path = Config.CHLOE_PATH
-            logger.info("Running Chloe gene annotator for circos visualisation...")
-            if not os.path.exists(f'{Config.CHLOE_PATH}'):
-                os.makedirs(f'{Config.CHLOE_PATH}')
-            logger.info("Creating consensus sequence for gene annotation...")
-            consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
-            with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
-                f.write('>consensus.fasta\n')
-                f.write(consensus)
-        elif option == 'premade_annot':
-            logger.info("Setting up provided annotation file for circos visualisation...")
-            annotate_path = Config.TMP_PATH
-        subprocess.run(['bash', '../chloe_runner.sh', Config.RESULT_PATH, option, annotate_path], check=True)
-        generate_txt_files = [fc.create_gene_name,fc.create_karyotype,fc.create_highlight]
-        for func in generate_txt_files:
-            func(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
+        generate_txt_files = []
+        if option == 'no_annot':
+            logger.info("No annotation provided. Circos visualisation without annotation.")
+            fc.create_karyotype_by_align(f"{Config.TMP_PATH}{Config.ALIGNMENT_FILE}", f"{Config.RESULT_PATH}")
+        else:
+            if option == 'generate_annot':
+                annotate_path = Config.CHLOE_PATH
+                logger.info("Running Chloe gene annotator for circos visualisation...")
+                if not os.path.exists(f'{Config.CHLOE_PATH}'):
+                    os.makedirs(f'{Config.CHLOE_PATH}')
+                logger.info("Creating consensus sequence for gene annotation...")
+                consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
+                with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
+                    f.write('>consensus.fasta\n')
+                    f.write(consensus)
+            elif option == 'premade_annot':
+                logger.info("Setting up provided annotation file for circos visualisation...")
+                annotate_path = Config.TMP_PATH
+            subprocess.run(['bash', '../chloe_runner.sh', Config.RESULT_PATH, option, annotate_path], check=True)
+            generate_txt_files.extend([fc.create_karyotype_by_annot, fc.create_gene_name, fc.create_highlight])
+            for func in generate_txt_files:
+                func(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
