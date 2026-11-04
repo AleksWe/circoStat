@@ -30,8 +30,10 @@ def create_gene_name(annotation_file, path):
     Generate a Circos-compatible gene_name.txt file based on genome length.
     """
     genes = select_attribute(annotation_file, 'gene')
+    genes.seq_id = 'chr'
     df_genes = genes[['seq_id', 'start', 'end', 'Name']]
-    df_genes.to_csv(f'{path}gene_name.txt', index=False, sep=' ', header=None)
+    path = os.path.join(path, 'gene_name.txt')
+    df_genes.to_csv(path, index=False, sep=' ', header=None)
     return
 
 def create_highlight(annotation_file, path):
@@ -39,8 +41,10 @@ def create_highlight(annotation_file, path):
     Generate a Circos-compatible highlight.txt file based on genome length.
     """
     genes = select_attribute(annotation_file, 'gene')
+    genes.seq_id = 'chr'
     df_highlight = genes[['seq_id', 'start', 'end']]
-    df_highlight.to_csv(f'{path}highlights.txt', index=False, sep=' ', header=None)
+    path = os.path.join(path,'highlights.txt')
+    df_highlight.to_csv(path, index=False, sep=' ', header=None)
     return
 
 def create_karyotype_by_annot(annotation_file, path):
@@ -49,7 +53,8 @@ def create_karyotype_by_annot(annotation_file, path):
     """
     selected = annotation_file.df
     data = f'chr - chr 1 {selected.start.min()} {selected.end.max()} grey'
-    with open(f'{path}karyotype.txt', "w") as text_file:
+    path = os.path.join(path, 'karyotype.txt')
+    with open(path, "w") as text_file:
         text_file.write(data)
     return
 
@@ -66,6 +71,7 @@ def create_karyotype_by_align(alignment_file, path):
     """
     alignment_length = find_alignment_length(alignment_file)
     data = f'chr - chr 1 1 {alignment_length} grey'
-    with open(f'{path}karyotype.txt', "w") as text_file:
+    path = os.path.join(path,'karyotype.txt')
+    with open(path, "w") as text_file:
         text_file.write(data)
     return

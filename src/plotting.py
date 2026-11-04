@@ -1,3 +1,5 @@
+from src.config import Config
+
 class CircosConfBuild:
     """
     General circos.conf modifications builder.
@@ -46,31 +48,51 @@ class Plotter:
         self.options = kwargs
 
     @staticmethod
+    def karyotype_plot():
+        plot = f"karyotype = results/karyotype.txt"
+        return plot
+
+    @staticmethod
+    def highlight_plot():
+        plot = f"""
+        <highlights>
+            z = 10
+            fill_color = vlgrey
+            <highlight>
+                file = results/highlights.txt
+                r0 = 0.2r
+                r1 = 1.0r
+            </highlight>
+        </highlights>
+        """
+        return plot
+
+    @staticmethod
     def gene_name_plot():
         plot = f"""
         <plot>
-        type       = text
-        color      = black
-        label_font = default
-        label_size = 42p
-        
-        file  = results/gene_name.txt
-        
-        r0 = 1r
-        r1 = 1.3r
-        padding = 2p
-        rpadding = 2p
-        
-        show_links     = yes
-        link_dims	= 6p
-        link_thickness = 2p
-        link_color     = red
-        label_snuggle  = yes
-        max_snuggle_distance = 2r
-        snuggle_tolerance = 0.5
-        snuggle_sampling = 2
+            type       = text
+            color      = black
+            label_font = default
+            label_size = 42p
+            
+            file  = results/gene_name.txt
+            
+            r0 = 1r
+            r1 = 1.3r
+            padding = 2p
+            rpadding = 2p
+            
+            show_links     = yes
+            link_dims	= 6p
+            link_thickness = 2p
+            link_color     = red
+            label_snuggle  = yes
+            max_snuggle_distance = 2r
+            snuggle_tolerance = 0.5
+            snuggle_sampling = 2
         </plot>
-            """
+        """
         return plot
 
     def create_plot(self):
@@ -84,6 +106,18 @@ class Plotter:
 
         for key, value in self.options.items():
             plot.append(f"    {key} = {value}")
+
+        plot.append(
+            """
+            <axes>
+                <axis>
+                spacing=0.05r
+                    color=lgrey
+                    thickness=1
+                </axis>
+            </axes>
+            """
+        )
 
         plot.append("</plot>")
 

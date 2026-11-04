@@ -1,8 +1,6 @@
 import configparser
 
 import src.plotting as p
-from src.config import Config
-
 
 def meta_data(path):
     """
@@ -25,19 +23,22 @@ def circos_conf_writer(new_config, path):
         file.write(new_config)
 
 
-def plot_generator(config_parser, section, starting_point = 0.895):
+def plot_generator(config_parser, circos_template, section, starting_point = 0.895):
     """
     :param config_parser: data from metadata config file
+    :param circos_template: ready-to-use circos template with basic config
     :param section: section from metadata config file
     :param starting_point: starting element for tracks
     :return: new and modified config file
     """
     new_circos = p.CircosConfBuild(config_parser)
-    with open(Config.CIRCOS_CONF_TEMPLATE,'r') as file:
+    with open(circos_template,'r') as file:
         template_circos_conf = file.read()
-    new_circos.add(template_circos_conf)
-    new_circos.add(new_circos.plots_starter())
-    new_circos.add(p.Plotter.gene_name_plot())
+    for value in [p.Plotter.karyotype_plot(), template_circos_conf, new_circos.plots_starter()]:
+        new_circos.add(value)
+    if config_parser.has_option(section,'gene_name'):
+        new_circos.add(p.Plotter.gene_name_plot())
+        new_circos.add(p.Plotter.highlight_plot())
     groups = {item.strip() for item in config_parser.get(section,"groups").split(",")}
     r0, r1 = starting_point, starting_point + 0.100
     if config_parser.has_option(section,'snp'):
@@ -57,13 +58,3 @@ def plot_generator(config_parser, section, starting_point = 0.895):
     new_circos.add(new_circos.plots_ender())
     circos_conf = new_circos.build()
     return circos_conf
-
-
-def main():
-    # Creating config variable that holds all names from META_DATA
-    config = meta_data(Config.META_DATA)
-    circos_conf_writer(plot_generator(config, Config.SECTION_FOR_META), '../circos.conf')
-
-
-if __name__ == '__main__':
-    main()

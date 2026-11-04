@@ -1,13 +1,12 @@
-import sys
 from collections import Counter
 from Bio import AlignIO
 from Bio.Data import IUPACData
 
-def generate_consensus_fasta(path='../tmp',file='Alignment.fasta'):
+def generate_consensus_fasta(path, file):
     try:
         iupac_values = IUPACData.ambiguous_dna_values
         iupac_values.pop('X', None)
-        alignment = AlignIO.read(f"{path}{file}", "fasta")
+        alignment = AlignIO.read(f"{path}/{file}", "fasta")
         consensus = ""
         for i in range(len(alignment[0])):
             alignment_column = alignment[:,i]
@@ -25,10 +24,4 @@ def generate_consensus_fasta(path='../tmp',file='Alignment.fasta'):
         return consensus
     except Exception as e:
         print("Error during consensus_maker.py run:", e)
-        sys.exit()
-
-def main():
-    generate_consensus_fasta()
-
-if __name__ == '__main__':
-    main()
+        raise

@@ -1,5 +1,4 @@
 import configparser, csv, glob, json, os, shutil, uvicorn
-from pathlib import Path
 from typing import List
 from starlette.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -13,31 +12,43 @@ from src.logging_config import setup_logging
 from src.config import Config
 
 import subprocess, logging
-
 setup_logging()
 logger = logging.getLogger("myapp")
 
 logger.info("Application started at http://localhost:8000 (Press CTRL+C to quit)")
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+from pathlib import Path
+import os
+
+def in_docker():
+    return os.path.exists("/.dockerenv")
+
+# Correct BASE_DIR depending on environment
+if in_docker():
+    BASE_DIR = Path("/circoStat")        # Docker project root
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent  # local project root
+
+# Set R environment variables
 os.environ["R_PROFILE_USER"] = str(BASE_DIR / ".Rprofile")
 os.environ["LANG"] = "en_US.UTF-8"
+
 from rpy2.robjects import r
 from rpy2.rinterface_lib.embedded import RRuntimeError
 
-
-# DEBUG MODE:
-if not os.path.exists("/.dockerenv"):
+# DEBUG MODE (local only)
+if not in_docker():
     print('Program not in docker - debug mode')
-    install_path = (BASE_DIR / "install_packages.R").resolve()
+
+    install_path = (BASE_DIR / "install_packages_old.R").resolve()
     install_path = str(install_path).replace("\\", "/")
     print("Using:", install_path)
+
     project_rprofile = str(BASE_DIR / ".Rprofile")
     project_rlib = str(BASE_DIR / "Rlibs")
 
     os.environ["R_LIBS_USER"] = project_rlib
-    os.environ["R_LIBS"] = project_rlib  # added as a safeguard
-
+    os.environ["R_LIBS"] = project_rlib
     #subprocess.run(["Rscript", install_path], check=True)
 
 app = FastAPI()
@@ -58,7 +69,7 @@ def tmp_creator(request):
     """
     for path in (Config.TMP_PATH, Config.RESULT_PATH):
         try:
-            os.makedirs(path, exist_ok=True)
+            os.makedirs(os.path.join(BASE_DIR,path), exist_ok=True)
         except (PermissionError, OSError) as e:
             logger.error(f"Failed to create directory {path}: {e}")
             return error_message(request)
@@ -94,7 +105,7 @@ def file_saver(files, request):
             elif '.csv' in file.filename:
                 no_csv = False
                 continue
-            tmp_path = os.path.join(f'{Config.TMP_PATH}{file.filename}')
+            tmp_path = os.path.join(BASE_DIR,Config.TMP_PATH,file.filename)
             with open(tmp_path, "wb") as f:
                 f.write(contents)
             file.file.close()
@@ -117,14 +128,15 @@ def csv_table_creator(table_data):
     :return: Set of unique groups.
     """
     data = json.loads(table_data)
-    with open(f'{Config.TMP_PATH}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
+    path = os.path.join(BASE_DIR,Config.TMP_PATH) + "/"
+    with open(f'{path}fasta_table.csv', 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(["FASTA_id", "FASTA_path", "group"])
         writer.writerows([
-            [row[0], f"{Config.TMP_PATH}{row[0]}", row[1]]
+            [row[0], f"{path}{row[0]}", row[1]]
             for row in data
         ])
-    unique_groups = {str(item[1]).lower() for item in data}
+    unique_groups = {str(item[1]).upper() for item in data}
     return unique_groups
 
 def alignment_checker(files, request):
@@ -136,6 +148,7 @@ def alignment_checker(files, request):
         Rendered HTML feedback page when validation fails; otherwise None.
     """
     alignment = [f for f in files if 'alignment' in f.filename.lower()]
+    path = os.path.join(BASE_DIR, Config.TMP_PATH) + "/"
     if len(alignment) == 0:
         logger.info(f"No alignment file detected... Please send a single alignment.fasta file.")
         return feedback_message(
@@ -147,10 +160,10 @@ def alignment_checker(files, request):
         logger.info(f"More than one alignment file detected... Please send a single alignment.fasta file.")
         return feedback_message(
             request,
-            {"title": "No alignment file detected",
+            {"title": "More than one alignment file detected",
              "detail": f"More than one alignment file detected. "
                        f"Make sure only single file includes a word 'alignment'."})
-    os.rename(f'{Config.TMP_PATH}{alignment[0].filename}', f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
+    os.rename(f'{path}{alignment[0].filename}', f'{path}{Config.ALIGNMENT_FILE}')
     return None
 
 def alignment_creator(request):
@@ -161,11 +174,15 @@ def alignment_creator(request):
         Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        r.source('../R/run_custom_alignment.R')
-        run_custom_alignment = r['run_custom_alignment']
-        sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
-        run_custom_alignment(sample_table)
-        shutil.move(Config.ALIGNMENT_FILE, f'{Config.TMP_PATH}{Config.ALIGNMENT_FILE}')
+        alignment_path = os.path.join(BASE_DIR,Config.R_PATH,Config.ALIGNMENT_R_SCRIPT)
+        r.source(alignment_path)
+        run_custom_alignment = r[Config.ALIGNMENT_R_SCRIPT.removesuffix('.R')]
+        path_to_table = os.path.join(BASE_DIR, Config.TMP_PATH, "fasta_table.csv").replace("\\", "/")
+        sample_table = r(f"read.csv('{path_to_table}')")
+        run_custom_alignment(sample_table, os.path.join(BASE_DIR, Config.ALIGNMENT_FILE))
+        path_from_alignment = os.path.join(BASE_DIR, Config.ALIGNMENT_FILE)
+        path_to_alignment = os.path.join(BASE_DIR, Config.TMP_PATH, Config.ALIGNMENT_FILE)
+        shutil.move(path_from_alignment, path_to_alignment)
     except (RRuntimeError, FileNotFoundError) as e:
         logger.error(f"Error: {e}")
         return feedback_message(
@@ -187,14 +204,17 @@ def statistical_tracks_generator(selected_options, request):
     """
     try:
         for script in Config.R_SCRIPTS.values():
-            r(f'source("{script}")')
-        sample_table = r(f"read.csv('{Config.TMP_PATH}fasta_table.csv')")
+            r_path = os.path.join(BASE_DIR,Config.R_PATH,script).replace("\\", "/")
+            r(f'source("{r_path}")')
+        path_to_table = os.path.join(BASE_DIR, Config.TMP_PATH, "fasta_table.csv").replace("\\", "/")
+        sample_table = r(f"read.csv('{path_to_table}')")
         preparing_circos_data = r['prepare_circos_data']
-        preparing_circos_data(sample_table, selected_options, Config.ALIGNMENT_FILE)
+        preparing_circos_data(sample_table, selected_options,
+                              str(BASE_DIR).replace("\\", "/"), Config.ALIGNMENT_FILE)
         txt_files = glob.glob("*.txt")
         for f in txt_files:
             try:
-                shutil.move(f, f'{Config.RESULT_PATH}{f}')
+                shutil.move(f, os.path.join(BASE_DIR,Config.RESULT_PATH,f))
             except Exception as e:
                 logger.error(f"Failed to move {f}: {e}")
                 return error_message(request)
@@ -205,9 +225,10 @@ def statistical_tracks_generator(selected_options, request):
         return error_message(request)
     return None
 
-def gene_annotator(option, request):
+def gene_annotator(metadata_conf_file, option, request):
     """
     Generates gene annotation for gene name track on circos using Chloe.jl.
+    :param metadata_conf_file: Current config file for parameter/file selection.
     :param option: Option from selected options from HTML form.
     :param request: Incoming FastAPI request.
     :return: TemplateResponse or None
@@ -216,27 +237,34 @@ def gene_annotator(option, request):
     try:
         annotate_path = ''
         generate_txt_files = []
+        result_path = os.path.join(BASE_DIR, Config.RESULT_PATH)
         if option == 'no_annot':
             logger.info("No annotation provided. Circos visualisation without annotation.")
-            fc.create_karyotype_by_align(f"{Config.TMP_PATH}{Config.ALIGNMENT_FILE}", f"{Config.RESULT_PATH}")
+            path_to_alignment = os.path.join(BASE_DIR, Config.TMP_PATH, Config.ALIGNMENT_FILE)
+            fc.create_karyotype_by_align(path_to_alignment, result_path)
+            metadata_conf_file.set(Config.SECTION_FOR_META, 'karyotype', 'karyotype.txt')
         else:
             if option == 'generate_annot':
-                annotate_path = Config.CHLOE_PATH
+                annotate_path = os.path.join(BASE_DIR,Config.CHLOE_PATH)
                 logger.info("Running Chloe gene annotator for circos visualisation...")
-                if not os.path.exists(f'{Config.CHLOE_PATH}'):
-                    os.makedirs(f'{Config.CHLOE_PATH}')
+                if not os.path.exists(annotate_path):
+                    os.makedirs(annotate_path)
                 logger.info("Creating consensus sequence for gene annotation...")
-                consensus = generate_consensus_fasta(path=Config.TMP_PATH, file=Config.ALIGNMENT_FILE)
-                with open(f'{Config.CHLOE_PATH}consensus.fasta', 'w') as f:
+                consensus = generate_consensus_fasta(path=os.path.join(BASE_DIR,Config.TMP_PATH),
+                                                     file=os.path.join(Config.ALIGNMENT_FILE))
+                consensus_path = os.path.join(annotate_path,'consensus.fasta')
+                with open(consensus_path, 'w') as f:
                     f.write('>consensus.fasta\n')
                     f.write(consensus)
             elif option == 'premade_annot':
                 logger.info("Setting up provided annotation file for circos visualisation...")
-                annotate_path = Config.TMP_PATH
-            subprocess.run(['bash', '../chloe_runner.sh', Config.RESULT_PATH, option, annotate_path], check=True)
+                annotate_path = os.path.join(BASE_DIR,Config.TMP_PATH)
+            subprocess.run(['bash', f'{BASE_DIR}/{Config.CHLOE_RUNNER_SCRIPT}', result_path, option, annotate_path], check=True)
             generate_txt_files.extend([fc.create_karyotype_by_annot, fc.create_gene_name, fc.create_highlight])
             for func in generate_txt_files:
-                func(fc.file_finder(f"{Config.RESULT_PATH}"), f"{Config.RESULT_PATH}")
+                func(fc.file_finder(result_path), result_path)
+            for element in ('karyotype','gene_name','highlights'):
+                metadata_conf_file.set(Config.SECTION_FOR_META, element, f"{element}.txt")
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -252,18 +280,19 @@ def config_writer(request, metadata_conf_file):
     Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        for file in Path(Config.RESULT_PATH).iterdir():
+        for file in Path(os.path.join(BASE_DIR,Config.RESULT_PATH)).iterdir():
             key = next((key for key in Config.OPTION_MAP if Config.OPTION_MAP[key] in file.name), None)
             if key is not None:
                 if file.name.count("_") >= 2:
                     metadata_conf_file.set(Config.SECTION_FOR_META,
                                            f"{key}_{file.name.split('_', 2)[2].rsplit('.txt', 1)[0]}",
-                                           f"{file}")
+                                           f"{file.name}")
                 else:
-                    metadata_conf_file.set(Config.SECTION_FOR_META, key, f"{file}")
-        with open(Config.META_DATA, 'w') as configfile:
+                    metadata_conf_file.set(Config.SECTION_FOR_META, key, f"{file.name}")
+        metadata_path = os.path.join(BASE_DIR,Config.META_DATA)
+        with open(metadata_path, 'w') as configfile:
             metadata_conf_file.write(configfile)
-        shutil.move(Config.META_DATA, f'{Config.TMP_PATH}{Config.META_DATA}')
+        shutil.move(metadata_path, os.path.join(BASE_DIR,Config.TMP_PATH,Config.META_DATA))
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -279,14 +308,14 @@ def circos_creator(request, name="circos.conf"):
     Rendered HTML error/feedback page when validation fails; otherwise None.
     """
     try:
-        metadata_file = cm.meta_data(f'{Config.TMP_PATH}{Config.META_DATA}')
-        new_config = cm.plot_generator(metadata_file, section=Config.SECTION_FOR_META)
-        cm.circos_conf_writer(new_config, f"{Config.TMP_PATH}{name}")
-        new_file_path = f"{BASE_DIR}/{name}"
-        if os.path.exists(new_file_path):
-            os.remove(new_file_path)
-        shutil.move(f"{Config.TMP_PATH}{name}", new_file_path)
-        subprocess.run(["bash", "-c", "cd .. && circos --conf circos.conf"], check=True)
+        metadata_file = cm.meta_data(os.path.join(BASE_DIR,Config.TMP_PATH,Config.META_DATA))
+        circos_template_dir = os.path.join(BASE_DIR,Config.CIRCOS_CONF_TEMPLATE)
+        new_config = cm.plot_generator(metadata_file, circos_template=circos_template_dir, section=Config.SECTION_FOR_META)
+        path_to_circos = os.path.join(BASE_DIR,name)
+        if os.path.exists(path_to_circos):
+            os.remove(path_to_circos)
+        cm.circos_conf_writer(new_config, path_to_circos)
+        subprocess.run(["circos", "--conf", "circos.conf"],cwd=BASE_DIR,check=True)
     except Exception as e:
         logger.error(f"Error: {e}")
         return error_message(request)
@@ -368,10 +397,12 @@ async def upload(request: Request,
                 return response
 
         logger.info("Processing all data for statistical analysis with circos track generation...")
-        statistical_tracks_generator(selected_options, request)
+        response = statistical_tracks_generator(selected_options, request)
+        if response is not None:
+            return response
 
         annotation = next(option for option in selected_options if "_annot" in option)
-        response = gene_annotator(annotation, request)
+        response = gene_annotator(metadata_conf_file, annotation, request)
         if response is not None:
             return response
 
@@ -388,15 +419,15 @@ async def upload(request: Request,
         return feedback_message(
             request,
             {"title": "CircoStat pipeline completed successfully",
-             "detail": "-------- Process completed succesfully. Please return to previous window by clicking 'Go Back'. \n"
-                    "To rerun process select form options, upload files and click 'Submit' button. --------"})
+             "detail": "Process completed succesfully. Please return to previous window by clicking 'Go back'. \n"
+                    "To rerun process select form options, upload files and click 'Submit' button."})
 
     finally:
         for path in Config.ALL_TEMPORARY:
-            if os.path.exists(path):
-                shutil.rmtree(path, ignore_errors=True)
+            if os.path.exists(os.path.join(BASE_DIR,path)):
+                shutil.rmtree(os.path.join(BASE_DIR,path), ignore_errors=True)
         logger.info("All temporary files deleted.")
-        logger.info("-------- Run completed. Please return to previous window by clicking 'Go Back'. \n"
+        logger.info("-------- Run completed. Please return to previous window by clicking 'Go back'. \n"
                     "To rerun process select form options, upload files and click 'Submit' button. --------")
 
 

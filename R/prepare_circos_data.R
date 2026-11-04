@@ -39,16 +39,16 @@
 #' @examples
 #' # results <- prepare_circos_data(my_samples_df, window_size = 500, jump_size = 250)
 
-prepare_circos_data <- function(samples_table, choices,
+prepare_circos_data <- function(samples_table, choices, current_path,
                                 alignment_out = "circos_alignment.fasta",
                                 window_size = 100, jump_size = 50, chr_label = "chr") {
 
-  tmp_dir <- "../tmp/"
+  tmp_dir <- file.path(current_path,"tmp")
   pop_dir <- file.path(tmp_dir, "pop_input_tmp")
 
   if(!dir.exists(pop_dir)) dir.create(pop_dir)
 
-  file.copy('../tmp/Alignment.fasta', pop_dir, overwrite = TRUE)
+  file.copy(file.path(tmp_dir,'Alignment.fasta'), pop_dir, overwrite = TRUE)
   alignment_path <- file.path(tmp_dir, alignment_out)
 
   tryCatch(
@@ -93,7 +93,7 @@ prepare_circos_data <- function(samples_table, choices,
         for(i in seq_along(unique_groups)) {
           pop_col <- paste0("pop ", i)
           if(pop_col %in% colnames(pop_final)) {
-            file_name <- paste0("pop_track_", unique_groups[i], ".txt")
+            file_name <- paste0("pop_track_", toupper(unique_groups[i]), ".txt")
             write.table(pop_final[, c("chr", "start", "end", pop_col)], file_name,
                         quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
           }
@@ -120,7 +120,7 @@ prepare_circos_data <- function(samples_table, choices,
 
         for(g in unique_groups) {
           if(g %in% colnames(spider_final)) {
-            file_name <- paste0("spider_track_", g, ".txt")
+            file_name <- paste0("spider_track_", toupper(g), ".txt")
             write.table(spider_final[, c("chr", "start", "end", g)], file_name,
                         quote = FALSE, sep = "\t", row.names = FALSE, col.names = FALSE)
           }
