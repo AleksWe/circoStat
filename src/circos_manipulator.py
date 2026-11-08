@@ -39,7 +39,11 @@ def plot_generator(config_parser, circos_template, section, starting_point = 0.8
     if config_parser.has_option(section,'gene_name'):
         new_circos.add(p.Plotter.gene_name_plot())
         new_circos.add(p.Plotter.highlight_plot())
-    groups = {item.strip() for item in config_parser.get(section,"groups").split(",")}
+    groups = list(dict.fromkeys(
+        item.strip()
+        for item in config_parser.get(section, "groups").split(",")
+        if item.strip()
+    ))
     r0, r1 = starting_point, starting_point + 0.100
     if config_parser.has_option(section,'snp'):
         snp_plot = p.Plotter(chart_type='scatter',
