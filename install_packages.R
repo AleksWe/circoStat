@@ -1,52 +1,122 @@
-message(">>> INSTALLER RPROFILE: ", Sys.getenv("R_PROFILE_USER"))
-message(">>> INSTALLER LIBPATHS: ", paste(.libPaths(), collapse="; "))
-
-lines <- readLines("../packages.txt")
-pkgs <- sub("==.*", "", lines)
-vers <- sub(".*==", "", lines)
 
 options(repos = c(CRAN = "https://cloud.r-project.org"))
-bioc_only <- c("Biostrings", "msa", "GenomeInfoDbData")
 
-if (!requireNamespace("BiocManager", quietly = TRUE)) {
-    install.packages("BiocManager")
+NCPUS <- 16L
+pkgs <- trimws(readLines("/circoStat/packages.txt"))
+
+# Parse package names and versions
+parse_pkgs <- function(prefix) {
+    x <- sub(
+        paste0("^", prefix, ":"),
+        "",
+        grep(paste0("^", prefix, ":"), pkgs, value = TRUE)
+    )
+
+    parts <- strsplit(x, "==", fixed = TRUE)
+
+    data.frame(
+        package = vapply(parts, `[[`, character(1), 1L),
+        version = vapply(parts, function(x) {
+            if (length(x) > 1L) x[2L] else NA_character_
+        }, character(1))
+    )
 }
 
-installed <- installed.packages(lib.loc = .libPaths()[1])
+cran <- parse_pkgs("CRAN")
+bio  <- parse_pkgs("BIOC")
 
-needs_install <- function(pkg, ver) {
-    if (!pkg %in% rownames(installed)) return(TRUE)
-    if (installed[pkg, "Version"] != ver) return(TRUE)
-    return(FALSE)
-}
+# ---------------------------------
+# CRAN packages: install exact versions
+# ---------------------------------
 
-to_install <- pkgs[sapply(seq_along(pkgs), function(i) needs_install(pkgs[i], vers[i]))]
+message(">>> Installing CRAN packages")
 
-if (length(to_install) == 0) {
-    message(">>> All packages already installed correctly.")
-    quit(save = "no")
-}
+if (nrow(cran)) {
+    if (!requireNamespace("remotes", quietly = TRUE))
+        install.packages("remotes")
 
-message(">>> Installing: ", paste(to_install, collapse = ", "))
-
-for (pkg in to_install) {
-
-    if (pkg == "PopGenome") {
-        message(">>> Installing PopGenome (archived)")
-        install.packages(
-            "https://cran.r-project.org/src/contrib/Archive/PopGenome/PopGenome_2.7.5.tar.gz",
-            repos = NULL,
-            type = "source"
+    for (i in seq_len(nrow(cran))) {
+        remotes::install_version(
+            cran$package[i],
+            version = cran$version[i],
+            repos = "https://cloud.r-project.org",
+            dependencies = TRUE,
+            Ncpus = NCPUS
         )
-        next
     }
-
-    if (pkg %in% bioc_only) {
-        BiocManager::install(pkg, ask = FALSE)
-        next
-    }
-
-    install.packages(pkg)
 }
 
-message(">>> Installation complete.")
+# ---------------------------------
+# Bioconductor 3.20 (R 4.4)
+# ---------------------------------
+
+message(">>> Configuring Bioconductor 3.20")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+options(repos = BiocManager::repositories(version = "3.20"))
+
+BiocManager::install(
+    version = "3.20",
+    ask = FALSE,
+    update = FALSE
+)
+
+stopifnot(as.character(BiocManager::version()) == "3.20")
+
+# Install all requested Bioconductor packages together
+message(">>> Installing Bioconductor packages")
+
+if (nrow(bio)) {
+    BiocManager::install(
+        bio$package,
+        ask = FALSE,
+        update = FALSE,
+        force = TRUE,
+        Ncpus = NCPUS
+    )
+}
+
+# ---------------------------------
+# Archived PopGenome
+# ---------------------------------
+
+message(">>> Installing PopGenome")
+
+install.packages(
+    "https://cran.r-project.org/src/contrib/Archive/PopGenome/PopGenome_2.7.5.tar.gz",
+    repos = NULL,
+    type = "source"
+)
+
+# ---------------------------------
+# Verify all requested package versions
+# ---------------------------------
+
+message(">>> Verifying package versions")
+
+requested <- rbind(cran, bio)
+installed <- utils::installed.packages()
+
+actual <- installed[
+    match(requested$package, installed[, "Package"]),
+    "Version"
+]
+
+check <- data.frame(
+    Package = requested$package,
+    Requested = requested$version,
+    Installed = actual
+)
+
+print(check, row.names = FALSE)
+
+bad <- is.na(actual) |
+    (!is.na(requested$version) & actual != requested$version)
+
+if (any(bad)) {
+    stop("PACKAGE VERSION MISMATCH - Docker build stopped!")
+}
+
+message(">>> ALL PACKAGE VERSIONS VERIFIED <<<")
