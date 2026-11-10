@@ -16,3 +16,4 @@ metadata.ini
 circos*.png
 /Rlibs
 .Rprofile
+/circos_debug

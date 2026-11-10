@@ -93,17 +93,16 @@ RUN cd /circoStat/chloe && julia --project=. -e 'using Pkg; Pkg.instantiate();'
 COPY . .
 
 # Install mamba solver for python venv
-RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/download/24.3.0-0/Miniforge3-24.3.0-0-Linux-x86_64.sh"
-RUN bash Miniforge3.sh -b -p /opt/conda && \
-    rm Miniforge3.sh
+RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/download/24.3.0-0/Miniforge3-24.3.0-0-Linux-x86_64.sh" && \
+    bash Miniforge3.sh -b -p /opt/conda && rm Miniforge3.sh
 
 # Add conda to the PATH
 ENV PATH="/opt/conda/bin:${PATH}"
 
 # Create and activate a mamba environment
 #RUN mamba create -n circos #-f package-list.txt
-RUN mamba create -n circos python=3.13
-RUN echo "mamba activate circos" >> /root/.bashrc
+RUN mamba create -n circos python=3.13 -y
+RUN echo "source activate circos" >> /root/.bashrc
 
 # Install all required packages and dependencies
 RUN pip install -r /circoStat/requirements.txt
