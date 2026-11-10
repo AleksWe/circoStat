@@ -1,7 +1,6 @@
 
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
-NCPUS <- 16L
 pkgs <- trimws(readLines("/circoStat/packages.txt"))
 
 # Parse package names and versions
@@ -36,12 +35,15 @@ if (nrow(cran)) {
         install.packages("remotes")
 
     for (i in seq_len(nrow(cran))) {
+        message(">>> Installing ", cran$package[i],
+                " version ", cran$version[i])
+
         remotes::install_version(
             cran$package[i],
             version = cran$version[i],
             repos = "https://cloud.r-project.org",
-            dependencies = TRUE,
-            Ncpus = NCPUS
+            dependencies = c("Depends", "Imports", "LinkingTo"),
+            upgrade = "never",
         )
     }
 }
@@ -72,9 +74,7 @@ if (nrow(bio)) {
     BiocManager::install(
         bio$package,
         ask = FALSE,
-        update = FALSE,
-        force = TRUE,
-        Ncpus = NCPUS
+        update = FALSE
     )
 }
 

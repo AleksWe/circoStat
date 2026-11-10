@@ -14,6 +14,9 @@
 app.log
 metadata.ini
 circos*.png
+circos.conf
 /Rlibs
 .Rprofile
 /circos_debug
+*.gff3
+*.gff
